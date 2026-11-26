@@ -1,0 +1,32 @@
+Be 100% honest and transparent. Read the referenced files completely. Keep summaries concise, precise, and code-focused with zero filler.
+
+Target Project: D:\SentinelLabs\TCP-Optimizer\ (Strict Boundary: All edits, code, and temp/staging files belong strictly inside this folder. Never touch or pollute D:\SentinelLabs\ root).
+
+MANDATORY FIRST ACTIONS:
+1. Read Root Directive: #file:'D:\SentinelLabs\.agents\AGENTS.md'
+2. Read Project Guide: #file:'D:\SentinelLabs\TCP-Optimizer\varun.txt'
+3. Read Project Documentation (once created): 'D:\SentinelLabs\TCP-Optimizer\README.md'
+4. Load Centralized Skills on Demand: Look up and read matching skills under 'D:\SentinelLabs\.agents\skills\' per AGENTS.md Rule 6 before authoring code.
+
+Project Purpose:
+- Rebuild the classic SG TCP Optimizer from scratch as a modern, open-source, actively maintained Windows 10/11 TCP/IP & network adapter tuning utility.
+- Cover modern Windows networking primitives: NetTCPIP (`Get-NetTCPSetting`/`Set-NetTCPSetting`), `netsh int tcp`, NIC advanced properties (`Get-NetAdapterAdvancedProperty`), Path MTU discovery, Bandwidth-Delay Product (BDP) & RWIN calculation, congestion providers (CUBIC/CTCP), ECN, Nagle/TcpAckFrequency/TCPNoDelay, RSS/RSC/LSO/offloads, and Windows-default vs. Optimal vs. Custom profiles.
+
+Guidelines:
+- Enterprise Grade: Exceed industry standards in architecture, clean separation between core networking engine and UI/CLI, and deterministic system-state handling.
+- 64-Bit & Multi-Core Async Concurrency: Strictly 64-bit (`x64` / `arm64`). Network probes (Path MTU discovery, multi-target latency sweeps, NIC/registry enumeration) MUST run asynchronously off the UI thread via thread pools or async workers so the interface never blocks.
+- Safety, Backup & Verifiability Invariants:
+  - Mandatory Pre-Change Snapshot: Always export/backup the current TCP/IP, registry, and NIC settings to a timestamped restore file before applying any modification, and support one-click rollback.
+  - Transparent Diff Preview: Always display Current vs. Proposed values (and exact underlying registry path, `netsh`, or PowerShell cmdlet) before applying changes.
+  - Zero Bloat, Zero Telemetry, Zero Snake-Oil: Never introduce telemetry, adware, scareware, or unverifiable "magic" registry tweaks. Every parameter must map to a documented Windows networking setting and be OS-version/interface-aware.
+  - Exportable & Auditable: Support generating inspectable apply/revert scripts (e.g., PowerShell / `.reg`) in addition to direct elevation-aware application.
+- Temp Artifact Planning Mandate: Never dump monolithic plans or multi-page logs in chat. Write comprehensive plans to 'D:\SentinelLabs\TCP-Optimizer\temp\<task_name>_plan.md' and provide a concise summary with clickable file link in chat.
+- Approval Gate: Announce natural language WHAT/WHY and wait for explicit user approval (GO / Proceed / Approved) before modifying files or executing commands.
+- Anti-Scope-Creep: Complete the current approved task 100% before proposing or adding further improvements.
+- Requirement Traceability & Code Integrity: Maintain 100% traceability for all requirements (never silently omit or drop). Locate and wire existing implementations without creating dummy wrappers. Clean up all stubs and never recreate deleted logic.
+- Workspace Containment & Tooling Hierarchy: Reusable fleet tools belong in 'D:\SentinelLabs\tools\'. TCP-Optimizer project-only tools belong in 'D:\SentinelLabs\TCP-Optimizer\tools\'. All temporary orchestration scripts, one-off test harnesses, and staging logs MUST be staged strictly under 'D:\SentinelLabs\TCP-Optimizer\temp\'.
+- Git Mutation Guardrail: Zero git commits, pushes, or resets without explicit per-occurrence user permission.
+- Response Discipline: Concise, code-focused, zero drive-by refactoring, token-efficient. If critical ambiguity exists, ask for clarification immediately.
+- Non-Negotiable Precedence & Anti-Silent Decision Directive: In case of any conflict or ambiguity between external skills (Matt Pocock, Addy Osmani) and the rules in AGENTS.md or varun.txt, AGENTS.md and varun.txt STRICTLY OVER-RULE the skills without exception. The agent is strictly prohibited from making silent or autonomous decisions. In case of any conflict, divergence, or doubt, the agent MUST stop and ask the user for explicit clarification. Scratch artifacts and plans must reside strictly in <project>\temp\, mutating Git actions require explicit approval (GO), and credentials must use .astra.
+
+State readiness for TCP-Optimizer and await user instructions or explicit approval before modifying files or executing commands.

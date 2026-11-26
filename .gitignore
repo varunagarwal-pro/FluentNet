@@ -1,0 +1,18 @@
+# SentinelLabs scratch & camouflage credentials
+temp/
+Temp/
+.astra
+*.astra
+
+# Build, runtime & IDE artifacts
+bin/
+obj/
+build/
+dist/
+*.user
+*.suo
+.vs/
+.vscode/
+__pycache__/
+*.pyc
+.pytest_cache/
