@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [x64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore & Test Core + CLI
+        run: |
+          dotnet test src/FluentNet.Tests/FluentNet.Tests.csproj -c Release --verbosity normal
+
+      - name: Build Classic Edition (.NET 4.8 WPF, x64)
+        run: |
+          dotnet build src/FluentNet.Classic/FluentNet.Classic.csproj -c Release -p:Platform=x64
+
+      - name: Publish WinUI 3 App (Unpackaged NativeAOT, x64)
+        run: |
+          dotnet publish src/FluentNet.App/FluentNet.App.csproj -c Release -p:Platform=x64 -o artifacts/FluentNet-App-win-x64
+
+      - name: Upload CI Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FluentNet-CI-${{ matrix.platform }}
+          path: |
+            artifacts/FluentNet-App-win-x64
+            src/FluentNet.Classic/bin/Release/net48/

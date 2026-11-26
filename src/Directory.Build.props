@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <FluentNetVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\version.txt').Trim())</FluentNetVersion>
+    <Version>$(FluentNetVersion)</Version>
+    <AssemblyVersion>$(FluentNetVersion).0</AssemblyVersion>
+    <FileVersion>$(FluentNetVersion).0</FileVersion>
+    <Company>Sentinel Labs</Company>
+    <Product>FluentNet</Product>
+    <Copyright>Copyright (c) 2026 Sentinel Labs</Copyright>
+  </PropertyGroup>
+</Project>
