@@ -105,6 +105,15 @@ public sealed class CimTcpProvider
                 "Disabled", "MSFT_NetTCPSetting[Internet].Timestamps", false,
                 "Disable to save 12 bytes per packet header overhead");
 
+            string? tfo = ExtractNetshField(globalOut, "TCP Fast Open");
+            if (tfo is not null && !string.IsNullOrWhiteSpace(tfo))
+            {
+                AddCimParam(list, "tcp.fastopen", "TCP Fast Open (TFO)", "General",
+                    DecodeEnabledDisabled(tfo), "Enabled",
+                    "MSFT_NetTCPSetting[Internet].FastOpen", false,
+                    "Reduces TCP handshake latency by sending data in SYN packets");
+            }
+
             AddCimParam(list, "offload.rss", "Receive-Side Scaling (RSS)", "General",
                 DecodeEnabledDisabled(ExtractNetshField(globalOut, "Receive-Side Scaling State") ?? "Enabled"),
                 "Enabled", "MSFT_NetOffloadGlobalSetting.ReceiveSideScaling", false,
@@ -180,7 +189,8 @@ public sealed class CimTcpProvider
         var list = new List<NetworkParameterState>();
         try
         {
-            const string wql = "SELECT SettingName, AutoTuningLevelLocal, ScalingHeuristics, CongestionProvider, EcnCapability, Timestamps, MaxSynRetransmissions, NonSackRttResiliency, InitialRtoMs, MinRtoMs, InitialCongestionWindowMss, FastOpen, PacingProfile, HyStart, Prr FROM MSFT_NetTCPSetting WHERE SettingName='Internet'";
+            // Use SELECT * so builds missing optional properties (e.g. FastOpen/HyStart/Prr) never throw WBEM_E_INVALID_QUERY.
+            const string wql = "SELECT * FROM MSFT_NetTCPSetting WHERE SettingName='Internet'";
             foreach (Dictionary<string, string> row in QueryCim(wql, cancellationToken))
             {
                 string template = row.TryGetValue("SettingName", out string? s) && !string.IsNullOrWhiteSpace(s) ? s : "Internet";
@@ -210,25 +220,42 @@ public sealed class CimTcpProvider
                     $"MSFT_NetTCPSetting[{template}].Timestamps", false,
                     "Disable to save 12 bytes per packet header overhead");
 
-                AddCimParam(list, "tcp.fastopen", "TCP Fast Open (TFO)", "General",
-                    DecodeEnabledDisabled(Get(row, "FastOpen")), "Enabled",
-                    $"MSFT_NetTCPSetting[{template}].FastOpen", false,
-                    "Reduces TCP handshake latency by sending data in SYN packets");
+                // Optional modern Win10/11 properties: only register if present on this OS build
+                string tfoRaw = Get(row, "FastOpen");
+                if (!string.IsNullOrWhiteSpace(tfoRaw))
+                {
+                    AddCimParam(list, "tcp.fastopen", "TCP Fast Open (TFO)", "General",
+                        DecodeEnabledDisabled(tfoRaw), "Enabled",
+                        $"MSFT_NetTCPSetting[{template}].FastOpen", false,
+                        "Reduces TCP handshake latency by sending data in SYN packets");
+                }
 
-                AddCimParam(list, "tcp.pacing", "TCP Pacing Profile", "Advanced",
-                    DecodePacingProfile(Get(row, "PacingProfile")), "Off",
-                    $"MSFT_NetTCPSetting[{template}].PacingProfile", false,
-                    "Paces outbound packet bursts to reduce micro-bufferbloat");
+                string pacingRaw = Get(row, "PacingProfile");
+                if (!string.IsNullOrWhiteSpace(pacingRaw))
+                {
+                    AddCimParam(list, "tcp.pacing", "TCP Pacing Profile", "Advanced",
+                        DecodePacingProfile(pacingRaw), "Off",
+                        $"MSFT_NetTCPSetting[{template}].PacingProfile", false,
+                        "Paces outbound packet bursts to reduce micro-bufferbloat");
+                }
 
-                AddCimParam(list, "tcp.hystart", "Hybrid Slow Start (HyStart)", "Advanced",
-                    DecodeEnabledDisabled(Get(row, "HyStart")), "Enabled",
-                    $"MSFT_NetTCPSetting[{template}].HyStart", false,
-                    "Detects safe slow-start exit point to prevent packet loss spikes");
+                string hystartRaw = Get(row, "HyStart");
+                if (!string.IsNullOrWhiteSpace(hystartRaw))
+                {
+                    AddCimParam(list, "tcp.hystart", "Hybrid Slow Start (HyStart)", "Advanced",
+                        DecodeEnabledDisabled(hystartRaw), "Enabled",
+                        $"MSFT_NetTCPSetting[{template}].HyStart", false,
+                        "Detects safe slow-start exit point to prevent packet loss spikes");
+                }
 
-                AddCimParam(list, "tcp.prr", "Proportional Rate Reduction (PRR)", "Advanced",
-                    DecodeEnabledDisabled(Get(row, "Prr")), "Enabled",
-                    $"MSFT_NetTCPSetting[{template}].Prr", false,
-                    "RFC 6937 fast recovery algorithm for smoother loss recovery");
+                string prrRaw = Get(row, "Prr");
+                if (!string.IsNullOrWhiteSpace(prrRaw))
+                {
+                    AddCimParam(list, "tcp.prr", "Proportional Rate Reduction (PRR)", "Advanced",
+                        DecodeEnabledDisabled(prrRaw), "Enabled",
+                        $"MSFT_NetTCPSetting[{template}].Prr", false,
+                        "RFC 6937 fast recovery algorithm for smoother loss recovery");
+                }
 
                 AddCimParam(list, "tcp.maxsynretx", "Max SYN Retransmissions", "Advanced",
                     Get(row, "MaxSynRetransmissions"), "4",
@@ -269,7 +296,7 @@ public sealed class CimTcpProvider
         var list = new List<NetworkParameterState>();
         try
         {
-            foreach (Dictionary<string, string> row in QueryCim("SELECT ReceiveSideScaling, ReceiveSegmentCoalescing FROM MSFT_NetOffloadGlobalSetting", cancellationToken))
+            foreach (Dictionary<string, string> row in QueryCim("SELECT * FROM MSFT_NetOffloadGlobalSetting", cancellationToken))
             {
                 AddCimParam(list, "offload.rss", "Receive-Side Scaling (RSS)", "General",
                     DecodeEnabledDisabled(Get(row, "ReceiveSideScaling")), "Enabled",

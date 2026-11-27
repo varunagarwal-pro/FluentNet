@@ -6,7 +6,7 @@
     DefaultButton="Primary"
     PrimaryButtonText="Apply Changes"
     CloseButtonText="Cancel"
-    CornerRadius="12">
+    CornerRadius="10">
 
     <ContentDialog.Resources>
         <x:Double x:Key="ContentDialogMaxWidth">980</x:Double>
@@ -34,7 +34,7 @@
                                FontSize="12"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
-                <Border x:Name="RebootBadge" Grid.Column="1" CornerRadius="999" Padding="12,5" VerticalAlignment="Center">
+                <Border x:Name="RebootBadge" Grid.Column="1" CornerRadius="4" BorderThickness="1" Padding="10,4" VerticalAlignment="Center">
                     <TextBlock x:Name="RebootBadgeText" FontSize="11.5" FontWeight="SemiBold" />
                 </Border>
             </Grid>
@@ -80,23 +80,23 @@
                                 <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="13" />
-                                        <Border Visibility="{x:Bind RebootVisibility}" Background="{ThemeResource FluentWarningSoftBrush}" CornerRadius="999" Padding="7,1" VerticalAlignment="Center">
-                                            <TextBlock Text="Reboot" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource FluentWarningBrush}" />
+                                        <Border Visibility="{x:Bind RebootVisibility}" Background="{ThemeResource FluentWarningSoftBrush}" BorderBrush="{ThemeResource FluentWarningBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                            <TextBlock Text="REBOOT" FontSize="9.5" FontWeight="SemiBold" Foreground="{ThemeResource FluentWarningBrush}" />
                                         </Border>
-                                        <Border Background="{ThemeResource FluentPillBgBrush}" CornerRadius="999" Padding="7,1" VerticalAlignment="Center">
-                                            <TextBlock Text="{x:Bind SourceLabel}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <Border Background="{ThemeResource FluentTagBgBrush}" BorderBrush="{ThemeResource FluentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                            <TextBlock Text="{x:Bind SourceLabel}" FontSize="9.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Border>
                                     </StackPanel>
                                     <TextBlock Text="{x:Bind ExactPath}" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
 
-                                <Border Grid.Column="2" Background="{ThemeResource FluentPillBgBrush}" CornerRadius="6" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                                <Border Grid.Column="2" Background="{ThemeResource FluentTagBgBrush}" BorderBrush="{ThemeResource FluentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
                                     <TextBlock Text="{x:Bind OldValue}" FontFamily="{StaticResource MonoFont}" FontSize="12" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                 </Border>
 
                                 <FontIcon Grid.Column="3" Glyph="&#xE72A;" FontSize="11" Foreground="{ThemeResource FluentAccentBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" />
 
-                                <Border Grid.Column="4" Background="{ThemeResource FluentAccentSoftBrush}" BorderBrush="{ThemeResource FluentAccentBrush}" BorderThickness="1" CornerRadius="6" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                                <Border Grid.Column="4" Background="{ThemeResource FluentAccentSoftBrush}" BorderBrush="{ThemeResource FluentAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
                                     <TextBlock Text="{x:Bind NewValue}" FontFamily="{StaticResource MonoFont}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource FluentAccentBrush}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                 </Border>
 

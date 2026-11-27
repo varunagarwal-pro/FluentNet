@@ -21,6 +21,7 @@ public sealed record AdapterDisplayRow(
     string IpAddress,
     string StatusLabel,
     Brush StatusBg,
+    Brush StatusBorder,
     Brush StatusFg,
     string IconPath);
 
@@ -30,6 +31,7 @@ public sealed record StackChipRow(
     string ValueText,
     Brush DotBrush,
     Brush BadgeBg,
+    Brush BadgeBorder,
     Brush BadgeFg);
 
 public sealed record DriverPropRow(
@@ -53,6 +55,7 @@ public sealed partial class MainWindow : Window
     private readonly ApplyEngine _applyEngine = new();
     private readonly SnapshotManager _snapshotManager = new();
     private readonly IcmpDiagnosticsService _icmp = new();
+    private readonly DnsOptimizerService _dns = new();
     private readonly UpdateService _updater = new();
 
     private HostScanReport? _lastReport;
@@ -64,14 +67,24 @@ public sealed partial class MainWindow : Window
     private string _searchQuery = string.Empty;
     private readonly string _appVersion;
 
+    private readonly DispatcherTimer _throughputTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private string? _activeAdapterGuid;
+    private long _lastRxBytes;
+    private long _lastTxBytes;
+    private DateTimeOffset _lastSampleAt;
+
     private static readonly Brush GreenBrush = new SolidColorBrush(Color.FromArgb(255, 16, 185, 129));
     private static readonly Brush AmberBrush = new SolidColorBrush(Color.FromArgb(255, 245, 158, 11));
     private static readonly Brush AccentBrush = new SolidColorBrush(Color.FromArgb(255, 56, 189, 248));
     private static readonly Brush MutedBrush = new SolidColorBrush(Color.FromArgb(255, 148, 163, 184));
-    private static readonly Brush UpBgBrush = new SolidColorBrush(Color.FromArgb(36, 16, 185, 129));
-    private static readonly Brush AmberBgBrush = new SolidColorBrush(Color.FromArgb(36, 245, 158, 11));
-    private static readonly Brush AccentBgBrush = new SolidColorBrush(Color.FromArgb(36, 56, 189, 248));
-    private static readonly Brush DownBgBrush = new SolidColorBrush(Color.FromArgb(32, 148, 163, 184));
+    private static readonly Brush UpBgBrush = new SolidColorBrush(Color.FromArgb(28, 16, 185, 129));
+    private static readonly Brush UpBorderBrush = new SolidColorBrush(Color.FromArgb(72, 16, 185, 129));
+    private static readonly Brush AmberBgBrush = new SolidColorBrush(Color.FromArgb(30, 245, 158, 11));
+    private static readonly Brush AmberBorderBrush = new SolidColorBrush(Color.FromArgb(72, 245, 158, 11));
+    private static readonly Brush AccentBgBrush = new SolidColorBrush(Color.FromArgb(28, 56, 189, 248));
+    private static readonly Brush AccentBorderBrush = new SolidColorBrush(Color.FromArgb(72, 56, 189, 248));
+    private static readonly Brush DownBgBrush = new SolidColorBrush(Color.FromArgb(24, 148, 163, 184));
+    private static readonly Brush DownBorderBrush = new SolidColorBrush(Color.FromArgb(64, 148, 163, 184));
 
     public MainWindow()
     {
@@ -87,8 +100,13 @@ public sealed partial class MainWindow : Window
         AboutVersionText.Text = $"FluentNet v{_appVersion} • 64-bit Windows Network Stack Optimizer • MIT Open Source • Zero Telemetry";
 
         bool isElevated = ElevationLauncher.IsProcessElevated();
-        PrivilegePillText.Text = isElevated ? "Administrator (Direct .NET Apply)" : "Standard Mode (On-Demand UAC)";
-        PrivilegePillText.Foreground = isElevated ? GreenBrush : MutedBrush;
+        PrivilegeTagText.Text = isElevated ? "ADMIN" : "STANDARD";
+        PrivilegeTagText.Foreground = isElevated ? GreenBrush : MutedBrush;
+        PrivilegeTag.Background = isElevated ? UpBgBrush : DownBgBrush;
+        PrivilegeTag.BorderBrush = isElevated ? UpBorderBrush : DownBorderBrush;
+
+        _throughputTimer.Tick += ThroughputTimer_Tick;
+        Closed += (_, _) => _throughputTimer.Stop();
 
         _ = RunHostScanAsync();
         _ = CheckForUpdatesBackgroundAsync();
@@ -169,6 +187,36 @@ public sealed partial class MainWindow : Window
         _searchQuery = sender.Text.Trim();
         RefreshAdaptersView();
         RefreshDriverProperties();
+        FilterSettingGrids();
+    }
+
+    private void FilterSettingGrids()
+    {
+        FilterGridCards(GeneralCardsGrid);
+        FilterGridCards(AdvGamingGrid);
+        FilterGridCards(AdvRtoGrid);
+        FilterGridCards(AdvQosGrid);
+    }
+
+    private void FilterGridCards(Grid grid)
+    {
+        foreach (UIElement child in grid.Children)
+        {
+            if (child is Border border)
+            {
+                if (string.IsNullOrEmpty(_searchQuery))
+                {
+                    border.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    string keywords = border.Tag?.ToString() ?? string.Empty;
+                    border.Visibility = keywords.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+                }
+            }
+        }
     }
 
     private async void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -192,7 +240,7 @@ public sealed partial class MainWindow : Window
 
     private async Task RunHostScanAsync()
     {
-        ParamsCountPillText.Text = "Scanning stack...";
+        OverviewMetaText.Text = "Scanning OS build, adapters, native CIM stack, and 64-bit Registry...";
         StatusBanner.IsOpen = false;
 
         try
@@ -209,14 +257,26 @@ public sealed partial class MainWindow : Window
                 ? $"{primary.LinkSpeedMbps} Mbps • MTU {primary.Ipv4Mtu}"
                 : "No active link";
 
-            string cong = _lastReport.Parameters.FirstOrDefault(p => p.Id == "tcp.congestion")?.CurrentValue ?? "CUBIC";
-            string tfo = _lastReport.Parameters.FirstOrDefault(p => p.Id == "tcp.fastopen")?.CurrentValue ?? "—";
+            if (primary is not null)
+            {
+                _activeAdapterGuid = primary.InterfaceGuid;
+                (_lastRxBytes, _lastTxBytes) = HostDiscoveryService.SampleAdapterBytes(primary.InterfaceGuid);
+                _lastSampleAt = DateTimeOffset.UtcNow;
+                _throughputTimer.Start();
+            }
+            else
+            {
+                _throughputTimer.Stop();
+            }
+
+            string cong = FindParam("tcp.congestion") ?? "CUBIC";
+            string? tfo = FindParam("tcp.fastopen");
             KpiCongestionText.Text = cong;
             KpiBbrGuardText.Text = os.RequiresBbr2LoopbackGuard
-                ? $"24H2+ Guard Ready • TFO: {tfo}"
-                : $"TFO: {tfo}";
+                ? (tfo is not null ? $"24H2+ Guard Ready • TFO: {tfo}" : "24H2+ BBR2 Guard Ready")
+                : (tfo is not null ? $"TCP Fast Open: {tfo}" : "Standard Windows Stack");
 
-            ParamsCountPillText.Text = $"{_lastReport.Parameters.Count} Live Parameters";
+            OverviewMetaText.Text = $"{_lastReport.Parameters.Count} live parameters inspected  •  Native .NET CIM & 64-bit Registry";
 
             RefreshStackChips();
             RefreshAdaptersView();
@@ -231,21 +291,50 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void ThroughputTimer_Tick(object? sender, object e)
+    {
+        if (string.IsNullOrWhiteSpace(_activeAdapterGuid) || _lastReport is null) return;
+        NetworkAdapterInfo? primary = _lastReport.Adapters.FirstOrDefault(a => a.InterfaceGuid == _activeAdapterGuid);
+        if (primary is null || !primary.IsUp) return;
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        double secs = Math.Max(0.5, (now - _lastSampleAt).TotalSeconds);
+        (long rx, long tx) = HostDiscoveryService.SampleAdapterBytes(_activeAdapterGuid);
+
+        if (rx >= _lastRxBytes && tx >= _lastTxBytes)
+        {
+            double rxBps = (rx - _lastRxBytes) / secs;
+            double txBps = (tx - _lastTxBytes) / secs;
+            KpiLinkText.Text = $"{primary.LinkSpeedMbps} Mbps • ↓ {FormatRate(rxBps)} ↑ {FormatRate(txBps)}";
+        }
+
+        _lastRxBytes = rx;
+        _lastTxBytes = tx;
+        _lastSampleAt = now;
+    }
+
+    private static string FormatRate(double bytesPerSec)
+    {
+        if (bytesPerSec >= 1_048_576) return $"{bytesPerSec / 1_048_576:0.0} MB/s";
+        if (bytesPerSec >= 1024) return $"{bytesPerSec / 1024:0} KB/s";
+        return $"{bytesPerSec:0} B/s";
+    }
+
+    private string? FindParam(string id) =>
+        _lastReport?.Parameters.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))?.CurrentValue;
+
     private void RefreshStackChips()
     {
         if (_lastReport is null) return;
 
-        string Val(string id, string fb = "—") =>
-            _lastReport.Parameters.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))?.CurrentValue ?? fb;
-
-        string autoTuning = Val("tcp.autotuning", "Normal");
-        string rss = Val("offload.rss", "Enabled");
-        string rsc = Val("offload.rsc", "Enabled");
-        string tfo = Val("tcp.fastopen", "Enabled");
-        string ecn = Val("tcp.ecn", "Disabled");
-        string ts = Val("tcp.timestamps", "Disabled");
-        string loopback = Val("tcp.loopback_large_mtu", "Enabled");
-        string throttle = Val("reg.network_throttling", "NotSet");
+        string autoTuning = FindParam("tcp.autotuning") ?? "N/A";
+        string rss = FindParam("offload.rss") ?? "N/A";
+        string rsc = FindParam("offload.rsc") ?? "N/A";
+        string tfo = FindParam("tcp.fastopen") ?? "N/A";
+        string ecn = FindParam("tcp.ecn") ?? "N/A";
+        string ts = FindParam("tcp.timestamps") ?? "N/A";
+        string loopback = FindParam("tcp.loopback_large_mtu") ?? "N/A";
+        string throttle = FindParam("reg.network_throttling") ?? "NotSet";
 
         bool throttleOff = throttle.Equals("0xffffffff", StringComparison.OrdinalIgnoreCase);
 
@@ -255,21 +344,29 @@ public sealed partial class MainWindow : Window
             MakeChip("RSS / RSC Offloads", "Multi-core & coalescing", $"{rss} / {rsc}", rss.Equals("Enabled", StringComparison.OrdinalIgnoreCase)),
             MakeChip("TCP Fast Open", "0-RTT SYN handshake", tfo, tfo.Equals("Enabled", StringComparison.OrdinalIgnoreCase)),
             MakeChip("ECN & Timestamps", "Header overhead & signaling", $"{ecn} / {ts}", ts.Equals("Disabled", StringComparison.OrdinalIgnoreCase)),
-            MakeChip("Loopback Large MTU", "Win11 24H2+ BBR2 guard", loopback, true),
+            MakeChip("Loopback Large MTU", "Win11 24H2+ BBR2 guard", loopback, loopback != "N/A"),
             MakeChip("Multimedia Throttling", "NetworkThrottlingIndex", throttleOff ? "Disabled (Max)" : throttle, throttleOff)
         };
 
         StackChipsRepeater.ItemsSource = chips;
     }
 
-    private static StackChipRow MakeChip(string label, string sub, string value, bool healthy) =>
-        new(
+    private static StackChipRow MakeChip(string label, string sub, string value, bool healthy)
+    {
+        if (value == "N/A")
+        {
+            return new StackChipRow(label, sub, value, MutedBrush, DownBgBrush, DownBorderBrush, MutedBrush);
+        }
+
+        return new StackChipRow(
             Label: label,
             Subtitle: sub,
             ValueText: value,
             DotBrush: healthy ? GreenBrush : AmberBrush,
             BadgeBg: healthy ? UpBgBrush : AmberBgBrush,
+            BadgeBorder: healthy ? UpBorderBrush : AmberBorderBrush,
             BadgeFg: healthy ? GreenBrush : AmberBrush);
+    }
 
     private IReadOnlyList<NetworkAdapterInfo> GetVisibleAdapters()
     {
@@ -329,6 +426,7 @@ public sealed partial class MainWindow : Window
                 IpAddress: a.Ipv4Address ?? "Not connected",
                 StatusLabel: a.IsUp ? "UP" : "DOWN",
                 StatusBg: a.IsUp ? UpBgBrush : DownBgBrush,
+                StatusBorder: a.IsUp ? UpBorderBrush : DownBorderBrush,
                 StatusFg: a.IsUp ? GreenBrush : MutedBrush,
                 IconPath: iconPath);
         }).ToList();
@@ -454,7 +552,10 @@ public sealed partial class MainWindow : Window
     private void UpdatePendingSummary(ProfileKind kind)
     {
         if (_lastReport is null) return;
+        int totalTracked = Math.Max(1, _customOverrides.Count);
         int diffCount = _diffEngine.ComputeDiff(_lastReport, _customOverrides).Count;
+        int alignedPct = (int)Math.Round(Math.Max(0, (totalTracked - diffCount) * 100.0 / totalTracked));
+
         string friendly = kind switch
         {
             ProfileKind.RecommendedOptimal => "Optimal",
@@ -465,9 +566,10 @@ public sealed partial class MainWindow : Window
 
         if (diffCount == 0)
         {
-            KpiDriftText.Text = "All Aligned";
+            KpiDriftText.Text = "100% Aligned";
             KpiDriftIcon.Foreground = GreenBrush;
             KpiDriftIconBox.Background = UpBgBrush;
+            KpiDriftIconBox.BorderBrush = UpBorderBrush;
             KpiDriftHeader.Foreground = GreenBrush;
             ApplyChangesButton.Content = "All Settings Aligned";
             ApplyChangesButton.IsEnabled = false;
@@ -475,9 +577,10 @@ public sealed partial class MainWindow : Window
         else
         {
             string word = diffCount == 1 ? "Change" : "Changes";
-            KpiDriftText.Text = $"{diffCount} {word}";
+            KpiDriftText.Text = $"{alignedPct}% • {diffCount} {word}";
             KpiDriftIcon.Foreground = AccentBrush;
             KpiDriftIconBox.Background = AccentBgBrush;
+            KpiDriftIconBox.BorderBrush = AccentBorderBrush;
             KpiDriftHeader.Foreground = AccentBrush;
             ApplyChangesButton.Content = $"Review & Apply ({diffCount})";
             ApplyChangesButton.IsEnabled = true;
@@ -509,6 +612,17 @@ public sealed partial class MainWindow : Window
             return visible[AdapterCombo.SelectedIndex];
         }
         return visible.FirstOrDefault(a => a.IsUp) ?? _lastReport?.Adapters.FirstOrDefault(a => a.IsUp);
+    }
+
+    private void FlushDns_Click(object sender, RoutedEventArgs e)
+    {
+        bool ok = DnsOptimizerService.FlushDnsCache();
+        StatusBanner.Severity = ok ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
+        StatusBanner.Title = ok ? "DNS cache flushed" : "DNS flush unavailable";
+        StatusBanner.Message = ok
+            ? "Windows DNS client resolver cache was cleared natively via dnsapi.dll."
+            : "Could not invoke DnsFlushResolverCache on this system.";
+        StatusBanner.IsOpen = true;
     }
 
     private void ResetDefaults_Click(object sender, RoutedEventArgs e)
@@ -653,7 +767,6 @@ public sealed partial class MainWindow : Window
 
         ApplyReport? report;
 
-        // Fast path: if already elevated, apply 100% in-process via native .NET CIM & Registry (zero child process!)
         if (ElevationLauncher.IsProcessElevated())
         {
             string snapPath = await _snapshotManager.SaveSnapshotAsync(manifest);
@@ -744,6 +857,21 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void RunDnsBenchmark_Click(object sender, RoutedEventArgs e)
+    {
+        await RunDiagnosticAsync(async ct =>
+        {
+            IReadOnlyList<DnsBenchmarkResult> results = await _dns.BenchmarkResolversAsync(cancellationToken: ct);
+            var lines = new List<string> { "[DNS BENCHMARK] Ranked fastest TCP/53 connect latency:" };
+            for (int i = 0; i < results.Count; i++)
+            {
+                DnsBenchmarkResult r = results[i];
+                lines.Add($"  #{i + 1}  {r.Preset.Name,-18} ({r.Preset.PrimaryIpv4,-14} / {r.Preset.SecondaryIpv4,-15})  ->  {r.StatusText,-10}  [{r.Preset.Tagline}]");
+            }
+            return string.Join(Environment.NewLine, lines);
+        });
+    }
+
     private async void RunMtu_Click(object sender, RoutedEventArgs e)
     {
         string host = DiagHostsBox.Text.Split(',')[0].Trim();
@@ -757,7 +885,7 @@ public sealed partial class MainWindow : Window
         {
             IReadOnlyList<LatencySweepResult> results = await _icmp.MeasureLatencySweepAsync(hosts, cancellationToken: ct);
             return string.Join(Environment.NewLine, results.Select(r =>
-                $"[LATENCY] {r.Host,-22} | Loss:{r.PacketLossPercent}% | Min:{r.MinMs}ms Avg:{r.AvgMs}ms Max:{r.MaxMs}ms Jitter:{r.JitterMs}ms"));
+                $"[LATENCY] {r.Host,-20} | Grade:{DnsOptimizerService.GradeLatencySweep(r),-2} | Loss:{r.PacketLossPercent}% | Min:{r.MinMs}ms Avg:{r.AvgMs}ms Max:{r.MaxMs}ms Jitter:{r.JitterMs}ms"));
         });
     }
 

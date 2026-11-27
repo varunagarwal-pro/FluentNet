@@ -56,28 +56,19 @@ public sealed class HostDiscoveryService
         }, cancellationToken);
     }
 
-    /// <summary>
-    /// Queries exact physical CPU core count via Win32 GetLogicalProcessorInformationEx
-    /// so hybrid Intel/AMD CPUs (P-cores + E-cores) report true physical core counts.
-    /// </summary>
     public static int ProbePhysicalCoreCount(int logicalFallback)
     {
         try
         {
             uint len = 0;
             GetLogicalProcessorInformationEx(RelationProcessorCore, IntPtr.Zero, ref len);
-            if (len == 0)
-            {
-                return Math.Max(1, logicalFallback / 2);
-            }
+            if (len == 0) return Math.Max(1, logicalFallback / 2);
 
             IntPtr ptr = Marshal.AllocHGlobal((int)len);
             try
             {
                 if (!GetLogicalProcessorInformationEx(RelationProcessorCore, ptr, ref len))
-                {
                     return Math.Max(1, logicalFallback / 2);
-                }
 
                 int cores = 0;
                 int offset = 0;
@@ -85,16 +76,8 @@ public sealed class HostDiscoveryService
                 {
                     int relationship = Marshal.ReadInt32(ptr, offset);
                     int size = Marshal.ReadInt32(ptr, offset + 4);
-                    if (size <= 0)
-                    {
-                        break;
-                    }
-
-                    if (relationship == RelationProcessorCore)
-                    {
-                        cores++;
-                    }
-
+                    if (size <= 0) break;
+                    if (relationship == RelationProcessorCore) cores++;
                     offset += size;
                 }
 
@@ -124,10 +107,7 @@ public sealed class HostDiscoveryService
             foreach (NetworkInterface nic in nics)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (IsNoiseInterface(nic))
-                {
-                    continue;
-                }
+                if (IsNoiseInterface(nic)) continue;
 
                 IPInterfaceProperties ipProps = nic.GetIPProperties();
                 IPv4InterfaceProperties? ipv4Props = null;
@@ -203,34 +183,62 @@ public sealed class HostDiscoveryService
             return results
                 .OrderByDescending(a => a.IsUp && a.LinkSpeedMbps > 0 && a.Ipv4Address is { Length: > 0 } ip && !ip.StartsWith("169.254.", StringComparison.Ordinal))
                 .ThenByDescending(a => a.IsUp)
-                .ThenByDescending(a => a.LinkSpeedMbps)
                 .ThenBy(a => a.MediaKind)
+                .ThenByDescending(a => a.LinkSpeedMbps)
                 .ThenBy(a => a.Alias, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }, cancellationToken);
     }
 
     /// <summary>
-    /// Filters out disconnected duplicate/ghost adapters (e.g. Wi-Fi 2, Wi-Fi 3 with 0 Mbps and no IP)
-    /// while preserving all active adapters and primary physical Ethernet/Wi-Fi ports.
+    /// Reads live aggregate RX/TX bytes for an adapter by InterfaceGuid so the UI can compute real-time throughput.
+    /// </summary>
+    public static (long BytesReceived, long BytesSent) SampleAdapterBytes(string interfaceGuid)
+    {
+        try
+        {
+            foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (string.Equals(nic.Id, interfaceGuid, StringComparison.OrdinalIgnoreCase))
+                {
+                    IPInterfaceStatistics stats = nic.GetIPStatistics();
+                    return (stats.BytesReceived, stats.BytesSent);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore transient interface changes
+        }
+
+        return (0, 0);
+    }
+
+    /// <summary>
+    /// Filters out disconnected virtual/VPN/Bluetooth adapters (e.g. PANGP Virtual Ethernet, Bluetooth PAN)
+    /// and disconnected secondary clones (e.g. Wi-Fi 2/3) regardless of bogus reported link speeds.
     /// </summary>
     public static bool IsGhostSecondaryAdapter(NetworkAdapterInfo adapter)
     {
-        if (adapter.IsUp || adapter.LinkSpeedMbps > 0)
+        // Always hide virtual/VPN/Bluetooth/tunnel adapters when not actively connected
+        if (adapter.MediaKind is AdapterMediaKind.VirtualOrTunnel or AdapterMediaKind.Other)
+        {
+            return !adapter.IsUp;
+        }
+
+        if (adapter.IsUp)
         {
             return false;
         }
 
-        if (adapter.MediaKind is not (AdapterMediaKind.Ethernet or AdapterMediaKind.WiFi))
-        {
-            return true;
-        }
-
-        // Secondary numbered clones like "Wi-Fi 2", "Wi-Fi 3", "Ethernet 2" with no IP and DOWN
+        // Secondary numbered clones like "Wi-Fi 2", "Wi-Fi 3" with no valid IP and DOWN
         bool hasNoValidIp = string.IsNullOrWhiteSpace(adapter.Ipv4Address) ||
                             (adapter.Ipv4Address is not null && adapter.Ipv4Address.StartsWith("169.254.", StringComparison.Ordinal));
 
-        if (hasNoValidIp && adapter.Description.IndexOf('#') >= 0)
+        if (hasNoValidIp && (adapter.Description.IndexOf('#') >= 0 ||
+                             ContainsIgnoreCase(adapter.Description, "Virtual") ||
+                             ContainsIgnoreCase(adapter.Description, "PANGP") ||
+                             ContainsIgnoreCase(adapter.Description, "Bluetooth")))
         {
             return true;
         }
@@ -241,21 +249,12 @@ public sealed class HostDiscoveryService
     private static string? FormatMacAddress(PhysicalAddress addr)
     {
         byte[] bytes = addr.GetAddressBytes();
-        if (bytes.Length == 0)
-        {
-            return null;
-        }
-
-        return string.Join(":", bytes.Select(b => b.ToString("X2")));
+        return bytes.Length == 0 ? null : string.Join(":", bytes.Select(b => b.ToString("X2")));
     }
 
     private static bool IsNoiseInterface(NetworkInterface nic)
     {
-        if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback)
-        {
-            return true;
-        }
-
+        if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) return true;
         return IsNoiseName(nic.Name, nic.Description);
     }
 
@@ -287,9 +286,15 @@ public sealed class HostDiscoveryService
         string desc = nic.Description;
         if (ContainsIgnoreCase(desc, "Virtual") ||
             ContainsIgnoreCase(desc, "VPN") ||
+            ContainsIgnoreCase(desc, "PANGP") ||
+            ContainsIgnoreCase(desc, "GlobalProtect") ||
             ContainsIgnoreCase(desc, "WireGuard") ||
+            ContainsIgnoreCase(desc, "Tailscale") ||
+            ContainsIgnoreCase(desc, "ZeroTier") ||
             ContainsIgnoreCase(desc, "TAP-") ||
             ContainsIgnoreCase(desc, "Hyper-V") ||
+            ContainsIgnoreCase(desc, "VMware") ||
+            ContainsIgnoreCase(desc, "VirtualBox") ||
             ContainsIgnoreCase(desc, "Bluetooth") ||
             nic.NetworkInterfaceType == NetworkInterfaceType.Tunnel)
         {

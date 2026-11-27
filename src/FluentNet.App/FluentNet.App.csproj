@@ -38,7 +38,9 @@
 
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
-    <Content Include="..\..\assets\**" Exclude="..\..\assets\Assetsa\**;..\..\assets\variants\**" Link="Assets\%(RecursiveDir)%(Filename)%(Extension)">
+    <Content Include="..\..\assets\**"
+             Exclude="..\..\assets\Assetsa\**;..\..\assets\variants\**;..\..\assets\svg\**;..\..\assets\BRAND_GUIDE.md;..\..\assets\fluentnet-banner*.png;..\..\assets\github-social-preview.png"
+             Link="Assets\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

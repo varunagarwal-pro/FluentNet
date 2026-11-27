@@ -4,40 +4,47 @@
 
     <FontFamily x:Key="MonoFont">Cascadia Code, Consolas, Courier New</FontFamily>
 
-    <!-- Adaptive Fluent Cards -->
+    <!-- Strict Fluent 11 CornerRadius Scale:
+         4px = Status Tags / Micro Badges (NEVER 999 — WinUI 3 renders 999 as distorted ovals!)
+         6px = Buttons / Inputs / Segmented Items
+         8px = Standard Cards & List Rows
+        10px = Hero Containers & Dialogs -->
+
     <Style x:Key="SurfaceCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{ThemeResource FluentSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="8" />
     </Style>
 
     <Style x:Key="HeroCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{ThemeResource FluentSurfaceElevatedBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="CornerRadius" Value="8" />
     </Style>
 
     <Style x:Key="SubtleCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{ThemeResource FluentSurfaceSubtleBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="6" />
     </Style>
 
     <Style x:Key="TerminalCardStyle" TargetType="Border">
         <Setter Property="Background" Value="{ThemeResource FluentTerminalBgBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="8" />
     </Style>
 
-    <!-- Modern Pill Badges -->
-    <Style x:Key="PillBadgeStyle" TargetType="Border">
-        <Setter Property="Background" Value="{ThemeResource FluentPillBgBrush}" />
-        <Setter Property="CornerRadius" Value="999" />
-        <Setter Property="Padding" Value="10,4" />
+    <!-- Crisp Enterprise Status Tag (CornerRadius 4 + 1px hairline border) -->
+    <Style x:Key="StatusTagStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource FluentTagBgBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="8,3" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
@@ -47,8 +54,8 @@
         <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="16,7" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
@@ -56,16 +63,16 @@
         <Setter Property="Background" Value="{ThemeResource FluentSurfaceElevatedBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderStrongBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="13,7" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="12,7" />
     </Style>
 
-    <!-- Segmented Profile Pill ToggleButton -->
-    <Style x:Key="ProfilePillToggleStyle" TargetType="ToggleButton">
+    <!-- Segmented Profile ToggleButton -->
+    <Style x:Key="ProfileSegmentToggleStyle" TargetType="ToggleButton">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="Padding" Value="13,6" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="12,5" />
         <Setter Property="FontSize" Value="12.5" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
