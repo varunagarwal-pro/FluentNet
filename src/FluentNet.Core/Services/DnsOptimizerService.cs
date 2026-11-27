@@ -17,13 +17,16 @@ public sealed record DnsBenchmarkResult(
     string StatusText);
 
 /// <summary>
-/// Native .NET DNS resolver benchmarking and Win32 dnsapi.dll cache flushing (zero ipconfig/PowerShell spawns).
+/// Native .NET DNS resolver benchmarking, Win32 dnsapi.dll cache flushing, and iphlpapi.dll ARP cache flushing.
 /// </summary>
 public sealed class DnsOptimizerService
 {
     [DllImport("dnsapi.dll", EntryPoint = "DnsFlushResolverCache")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DnsFlushResolverCacheNative();
+
+    [DllImport("iphlpapi.dll", EntryPoint = "FlushIpNetTable")]
+    private static extern uint FlushIpNetTableNative(uint dwIfIndex);
 
     public static IReadOnlyList<DnsPreset> Presets { get; } = new[]
     {
@@ -34,9 +37,6 @@ public sealed class DnsOptimizerService
         new DnsPreset("OpenDNS", "Cisco enterprise filtering", "208.67.222.222", "208.67.220.220")
     };
 
-    /// <summary>
-    /// Flushes the Windows DNS client resolver cache directly via Win32 dnsapi.dll (instant, unelevated, zero console).
-    /// </summary>
     public static bool FlushDnsCache()
     {
         try
@@ -49,9 +49,53 @@ public sealed class DnsOptimizerService
         }
     }
 
-    /// <summary>
-    /// Concurrently measures TCP/53 connect latency across all curated public DNS resolvers and returns them ranked fastest-first.
-    /// </summary>
+    public static bool FlushArpCache(int interfaceIndex)
+    {
+        if (interfaceIndex <= 0) return false;
+        try
+        {
+            return FlushIpNetTableNative((uint)interfaceIndex) == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static async Task<(bool Succeeded, string Message)> RenewDhcpLeaseAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "ipconfig.exe",
+                Arguments = "/renew",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            using var proc = Process.Start(psi);
+            if (proc is null) return (false, "Could not start DHCP renewal.");
+            Task<string> outTask = proc.StandardOutput.ReadToEndAsync();
+            Task<string> errTask = proc.StandardError.ReadToEndAsync();
+            bool exited = await Task.Run(() => proc.WaitForExit(10000), ct).ConfigureAwait(false);
+            if (!exited)
+            {
+                try { proc.Kill(); } catch { /* ignore */ }
+                return (false, "DHCP renewal timed out.");
+            }
+            await Task.WhenAll(outTask, errTask).ConfigureAwait(false);
+            return proc.ExitCode == 0
+                ? (true, "DHCP lease renewed.")
+                : (false, "DHCP renewal did not complete (adapter may use a static IP).");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
     public async Task<IReadOnlyList<DnsBenchmarkResult>> BenchmarkResolversAsync(
         int timeoutMs = 1500,
         CancellationToken cancellationToken = default)
@@ -74,10 +118,7 @@ public sealed class DnsOptimizerService
         {
             ct.ThrowIfCancellationRequested();
             double? ms = await MeasureTcpConnectMsAsync(preset.PrimaryIpv4, 53, timeoutMs, ct).ConfigureAwait(false);
-            if (ms.HasValue)
-            {
-                samples.Add(ms.Value);
-            }
+            if (ms.HasValue) samples.Add(ms.Value);
         }
 
         if (samples.Count == 0)

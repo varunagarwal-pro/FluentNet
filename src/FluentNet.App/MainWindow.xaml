@@ -29,7 +29,7 @@
         <TitleBar x:Name="AppTitleBar"
                   Grid.Row="0"
                   Title="FluentNet"
-                  Subtitle="64-Bit Native Network Optimizer"
+                  Subtitle="Windows Network Optimizer"
                   IsPaneToggleButtonVisible="True"
                   PaneToggleRequested="TitleBar_PaneToggleRequested">
             <TitleBar.IconSource>
@@ -64,17 +64,17 @@
 
             <NavigationView.MenuItems>
                 <NavigationViewItemHeader Content="NETWORK TUNING" />
-                <NavigationViewItem x:Name="NavDashboard" Tag="dashboard" IsSelected="True" ToolTipService.ToolTip="Host telemetry, live throughput, and network adapters (Ctrl+1)">
+                <NavigationViewItem x:Name="NavDashboard" Tag="dashboard" IsSelected="True" ToolTipService.ToolTip="Live network summary, throughput, and adapters (Ctrl+1)">
                     <NavigationViewItem.Icon>
                         <ImageIcon Source="Assets/icons/dashboard.png" />
                     </NavigationViewItem.Icon>
                     <StackPanel Spacing="1">
                         <TextBlock Text="Overview" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Host scan &amp; live stack" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="Status, speed &amp; adapters" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </NavigationViewItem>
 
-                <NavigationViewItem x:Name="NavGeneral" Tag="general" ToolTipService.ToolTip="Connection speed, adapter MTU, TCP Auto-Tuning, Congestion &amp; Offloads (Ctrl+2)">
+                <NavigationViewItem x:Name="NavGeneral" Tag="general" ToolTipService.ToolTip="Internet speed slider, MTU, TCP scaling, and hardware offloads (Ctrl+2)">
                     <NavigationViewItem.Icon>
                         <ImageIcon Source="Assets/icons/general.png" />
                     </NavigationViewItem.Icon>
@@ -84,34 +84,34 @@
                     </StackPanel>
                 </NavigationViewItem>
 
-                <NavigationViewItem x:Name="NavAdvanced" Tag="advanced" ToolTipService.ToolTip="Gaming Nagle, AFD, RTO, Pacing, QoS &amp; NIC driver properties (Ctrl+3)">
+                <NavigationViewItem x:Name="NavAdvanced" Tag="advanced" ToolTipService.ToolTip="Gaming low-latency tweaks, timeouts, QoS, and adapter driver options (Ctrl+3)">
                     <NavigationViewItem.Icon>
                         <ImageIcon Source="Assets/icons/advanced.png" />
                     </NavigationViewItem.Icon>
                     <StackPanel Spacing="1">
                         <TextBlock Text="Advanced Settings" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Nagle, RTO, QoS &amp; drivers" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="Gaming, timeouts &amp; drivers" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </NavigationViewItem>
 
                 <NavigationViewItemHeader Content="TOOLS &amp; SAFETY" />
-                <NavigationViewItem x:Name="NavDiagnostics" Tag="diagnostics" ToolTipService.ToolTip="BDP/RWIN, DNS Benchmark, Path MTU, Latency Grade &amp; Traceroute (Ctrl+4)">
+                <NavigationViewItem x:Name="NavDiagnostics" Tag="diagnostics" ToolTipService.ToolTip="DNS switcher &amp; benchmark, BDP calculator, MTU test, ping &amp; repair tools (Ctrl+4)">
                     <NavigationViewItem.Icon>
                         <ImageIcon Source="Assets/icons/diagnostics.png" />
                     </NavigationViewItem.Icon>
                     <StackPanel Spacing="1">
                         <TextBlock Text="Diagnostics &amp; DNS" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="BDP, DNS, MTU &amp; trace" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="DNS, repair, MTU &amp; ping" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </NavigationViewItem>
 
-                <NavigationViewItem x:Name="NavSnapshots" Tag="snapshots" ToolTipService.ToolTip="Pre-change JSON backups &amp; 1-click rollback (Ctrl+5)">
+                <NavigationViewItem x:Name="NavSnapshots" Tag="snapshots" ToolTipService.ToolTip="Automatic backups &amp; 1-click restore (Ctrl+5)">
                     <NavigationViewItem.Icon>
                         <ImageIcon Source="Assets/icons/snapshots.png" />
                     </NavigationViewItem.Icon>
                     <StackPanel Spacing="1">
                         <TextBlock Text="Snapshots &amp; Restore" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="Backups &amp; 1-click rollback" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="Backups &amp; 1-click restore" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
@@ -133,27 +133,17 @@
 
             <Grid Padding="24,16,20,16" RowSpacing="12">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Dismissible Action Banner -->
-                <InfoBar x:Name="StatusBanner"
-                         Grid.Row="0"
-                         Margin="0,0,20,0"
-                         IsOpen="False"
-                         IsClosable="True"
-                         Severity="Informational" />
-
                 <!-- 1. OVERVIEW -->
-                <Grid x:Name="DashboardPanel" Grid.Row="1" Visibility="Visible" RowSpacing="16">
+                <Grid x:Name="DashboardPanel" Grid.Row="0" Visibility="Visible" RowSpacing="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Fixed Enterprise Header (Zero Oval Pills) -->
                     <Grid Grid.Row="0" Margin="0,0,20,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -166,21 +156,27 @@
                                     <TextBlock x:Name="PrivilegeTagText" Text="STANDARD" FontSize="10.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Border>
                                 <TextBlock x:Name="OverviewMetaText"
-                                           Text="Scanning live network stack..."
+                                           Text="Scanning your network settings..."
                                            FontSize="12"
                                            VerticalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="FlushDns_Click" ToolTipService.ToolTip="Flush Windows DNS resolver cache natively via dnsapi.dll">
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="FlushDns_Click" ToolTipService.ToolTip="Clears cached DNS lookups immediately—helpful if websites fail to resolve">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE74D;" FontSize="12.5" Foreground="{ThemeResource FluentSuccessBrush}" />
                                     <TextBlock Text="Flush DNS" />
                                 </StackPanel>
                             </Button>
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RecommendedSettings_Click" ToolTipService.ToolTip="Loads safe, balanced Windows 10/11 recommended settings (previewed before applying)">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE735;" FontSize="12.5" Foreground="{ThemeResource FluentAccentBrush}" />
+                                    <TextBlock Text="Recommended Settings" />
+                                </StackPanel>
+                            </Button>
                             <Button Style="{StaticResource SubtleActionButtonStyle}" Click="ResetDefaults_Click" Content="Reset Defaults" />
-                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RescanButton_Click" ToolTipService.ToolTip="Re-scan live network stack (F5)">
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RescanButton_Click" ToolTipService.ToolTip="Refresh live network state (F5)">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE72C;" FontSize="12.5" Foreground="{ThemeResource FluentAccentBrush}" />
                                     <TextBlock Text="Re-Scan" />
@@ -191,7 +187,7 @@
 
                     <ScrollViewer x:Name="OverviewScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="16" Margin="0,0,20,8">
-                            <!-- 4 Crisp KPI Telemetry Cards -->
+                            <!-- 4 Crisp KPI Cards -->
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -214,17 +210,30 @@
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Column="1" Style="{StaticResource HeroCardStyle}" Padding="14,12">
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                        <Border Width="36" Height="36" CornerRadius="6" Background="{ThemeResource FluentSuccessSoftBrush}" BorderBrush="{ThemeResource FluentSuccessBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE839;" FontSize="15" Foreground="{ThemeResource FluentSuccessBrush}" />
-                                        </Border>
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="ACTIVE CONNECTION" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource FluentSuccessBrush}" />
-                                            <TextBlock x:Name="KpiNicText" Text="Scanning..." FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock x:Name="KpiLinkText" Text="—" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
+                                <!-- Active Connection Card with Live RX/TX Sparkline -->
+                                <Border Grid.Column="1" Style="{StaticResource HeroCardStyle}" Padding="14,10">
+                                    <Grid RowSpacing="4">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                            <Border Width="36" Height="36" CornerRadius="6" Background="{ThemeResource FluentSuccessSoftBrush}" BorderBrush="{ThemeResource FluentSuccessBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE839;" FontSize="15" Foreground="{ThemeResource FluentSuccessBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock Text="ACTIVE CONNECTION" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource FluentSuccessBrush}" />
+                                                <TextBlock x:Name="KpiNicText" Text="Scanning..." FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock x:Name="KpiLinkText" Text="—" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <Canvas Grid.Row="1" Height="16" Margin="48,2,0,0">
+                                            <Polyline x:Name="ThroughputSparkline"
+                                                      Stroke="{ThemeResource FluentSuccessBrush}"
+                                                      StrokeThickness="1.5"
+                                                      StrokeLineJoin="Round" />
+                                        </Canvas>
                                     </Grid>
                                 </Border>
 
@@ -259,7 +268,7 @@
 
                             <!-- Live TCP/IP Stack Snapshot -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Live TCP/IP Stack Snapshot" FontSize="13.5" FontWeight="SemiBold" />
+                                <TextBlock Text="Live Network Stack Snapshot" FontSize="13.5" FontWeight="SemiBold" />
                                 <ItemsRepeater x:Name="StackChipsRepeater">
                                     <ItemsRepeater.Layout>
                                         <UniformGridLayout MinItemWidth="220" MaximumRowsOrColumns="3" MinColumnSpacing="10" MinRowSpacing="10" ItemsStretch="Fill" />
@@ -331,7 +340,7 @@
                 </Grid>
 
                 <!-- 2. GENERAL SETTINGS -->
-                <Grid x:Name="GeneralPanel" Grid.Row="1" Visibility="Collapsed" RowSpacing="14">
+                <Grid x:Name="GeneralPanel" Grid.Row="0" Visibility="Collapsed" RowSpacing="14">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -343,15 +352,23 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="General TCP/IP &amp; Adapter Offloads" Style="{ThemeResource TitleTextBlockStyle}" />
-                            <TextBlock Text="Configure connection speed, adapter MTU, TCP window scaling, congestion control, Fast Open, and hardware offloads."
+                            <TextBlock Text="General Network &amp; Adapter Settings" Style="{ThemeResource TitleTextBlockStyle}" />
+                            <TextBlock Text="Drag the speed slider to auto-tune settings for your plan, or hover over any card to see its real-world impact."
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{ThemeResource CaptionTextBlockStyle}" />
                         </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource SubtleActionButtonStyle}" Click="ResetDefaults_Click" Content="Reset Defaults" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RecommendedSettings_Click" ToolTipService.ToolTip="Loads safe, balanced Windows 10/11 recommended settings (previewed before applying)">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE735;" FontSize="12.5" Foreground="{ThemeResource FluentAccentBrush}" />
+                                    <TextBlock Text="Recommended Settings" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="ResetDefaults_Click" Content="Reset Defaults" />
+                        </StackPanel>
                     </Grid>
 
                     <ScrollViewer x:Name="GeneralScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="GeneralSettingsHost" Spacing="14" Margin="0,0,20,8">
+                        <StackPanel Spacing="14" Margin="0,0,20,8">
                             <Border Style="{StaticResource HeroCardStyle}" Padding="16,14">
                                 <Grid RowSpacing="12" ColumnSpacing="16">
                                     <Grid.RowDefinitions>
@@ -366,14 +383,16 @@
 
                                     <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Spacing="4">
                                         <Grid>
-                                            <TextBlock Text="Connection Speed Reference (Live BDP / RWIN Target)" FontWeight="SemiBold" />
+                                            <TextBlock Text="Internet Connection Speed (Auto-Tunes Settings Live)" FontWeight="SemiBold" />
                                             <TextBlock x:Name="SpeedLabelText" Text="100 Mbps  •  RWIN 500 KB @ 40ms" HorizontalAlignment="Right" FontFamily="{StaticResource MonoFont}" Foreground="{ThemeResource FluentAccentBrush}" FontWeight="SemiBold" FontSize="12" />
                                         </Grid>
-                                        <Slider x:Name="SpeedSlider" Minimum="10" Maximum="2500" Value="100" StepFrequency="10" ValueChanged="SpeedSlider_ValueChanged" />
+                                        <Slider x:Name="SpeedSlider" Minimum="10" Maximum="2500" Value="100" StepFrequency="10" ValueChanged="SpeedSlider_ValueChanged"
+                                                ToolTipService.ToolTip="Drag to match your ISP download speed. Automatically tunes RTO, pacing, throttling, and buffer thresholds for your speed tier." />
                                     </StackPanel>
 
                                     <ComboBox x:Name="AdapterCombo" Grid.Row="1" Grid.Column="0" Header="Target Network Adapter" HorizontalAlignment="Stretch" SelectionChanged="AdapterCombo_Changed" />
-                                    <TextBox x:Name="MtuBox" Grid.Row="1" Grid.Column="1" Header="IPv4 MTU (bytes)" Text="1500" Width="120" TextChanged="MtuBox_TextChanged" />
+                                    <TextBox x:Name="MtuBox" Grid.Row="1" Grid.Column="1" Header="Packet Size / MTU" Text="1500" Width="130" LostFocus="MtuBox_LostFocus"
+                                             ToolTipService.ToolTip="Maximum packet size in bytes (576–9000).&#x0a;Impact: Prevents packet fragmentation.&#x0a;Recommended: 1500 for Fiber/Cable/Wi-Fi, 1492 for PPPoE.&#x0a;Takes effect: Immediately." />
                                     <CheckBox x:Name="PppoeCheck" Grid.Row="1" Grid.Column="2" Content="PPPoE (1492)" VerticalAlignment="Bottom" Margin="0,0,0,4" Checked="PppoeCheck_Changed" Unchecked="PppoeCheck_Changed" />
                                 </Grid>
                             </Border>
@@ -384,83 +403,93 @@
                                     <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="TCP Window Auto-Tuning RWIN">
+                                <Border x:Name="CardAutoTuning" Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="TCP Window Auto-Tuning RWIN"
+                                        ToolTipService.ToolTip="Lets Windows automatically grow the TCP receive window for fast downloads.&#x0a;Impact: Essential for full broadband/gigabit download speeds.&#x0a;Recommended: Normal.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TCP Window Auto-Tuning" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Dynamically scales RWIN for high-speed links" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbAutoTuning" Grid.Column="1" Width="150" Tag="tcp.autotuning" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Automatic Receive Window (Auto-Tuning)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Scales download buffer size to match your connection speed" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbAutoTuning" Grid.Column="1" Width="185" Tag="tcp.autotuning" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Scaling Heuristics">
+                                <Border x:Name="CardHeuristics" Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Scaling Heuristics"
+                                        ToolTipService.ToolTip="Prevents Windows from silently capping Auto-Tuning when it suspects an older router.&#x0a;Impact: Keeps download speeds consistently high.&#x0a;Recommended: Disabled.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Scaling Heuristics" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Disable so Windows won't throttle auto-tuning" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbHeuristics" Grid.Column="1" Width="140" Tag="tcp.heuristics" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Auto-Tuning Limiter (Heuristics)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Keep off so Windows never throttles your receive window" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbHeuristics" Grid.Column="1" Width="185" Tag="tcp.heuristics" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Congestion Control Provider CUBIC BBR2 CTCP">
+                                <Border x:Name="CardCongestion" Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Congestion Control Provider CUBIC BBR2 CTCP"
+                                        ToolTipService.ToolTip="Controls how Windows recovers from packet loss and fills available bandwidth.&#x0a;Impact: Directly affects throughput stability and latency under load.&#x0a;Recommended: CUBIC (stable default) or BBR2 (modern Win11).&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Congestion Control Provider" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="CUBIC standard; BBR2 auto-sets 24H2+ loopback guard" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbCongestion" Grid.Column="1" Width="140" Tag="tcp.congestion" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Congestion Control Algorithm" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="CUBIC is standard; BBR2 auto-enables the Win11 24H2+ guard" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbCongestion" Grid.Column="1" Width="185" Tag="tcp.congestion" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="ECN Capability RFC 3168">
+                                <Border x:Name="CardEcn" Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="ECN Capability RFC 3168"
+                                        ToolTipService.ToolTip="Signals congestion before routers drop packets (RFC 3168).&#x0a;Impact: Can cause issues with some older ISP routers if forced on.&#x0a;Recommended: Disabled for lowest latency.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="ECN Capability" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Explicit Congestion Notification (RFC 3168)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbEcn" Grid.Column="1" Width="140" Tag="tcp.ecn" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Congestion Signaling (ECN)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Router-assisted congestion warnings (RFC 3168)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbEcn" Grid.Column="1" Width="185" Tag="tcp.ecn" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Receive-Side Scaling RSS offload">
+                                <Border x:Name="CardRss" Grid.Row="2" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Receive-Side Scaling RSS offload"
+                                        ToolTipService.ToolTip="Spreads incoming network traffic across multiple CPU cores instead of one core.&#x0a;Impact: Higher throughput and lower CPU bottleneck on fast connections.&#x0a;Recommended: Enabled.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Receive-Side Scaling (RSS)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Distributes packet processing across CPU cores" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbRss" Grid.Column="1" Width="140" Tag="offload.rss" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Multi-Core Packet Processing (RSS)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Distributes incoming network load across your CPU cores" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbRss" Grid.Column="1" Width="185" Tag="offload.rss" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Receive Segment Coalescing RSC offload">
+                                <Border x:Name="CardRsc" Grid.Row="2" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Receive Segment Coalescing RSC offload"
+                                        ToolTipService.ToolTip="Bundles multiple small incoming packets into one larger packet to save CPU.&#x0a;Impact: Great for bulk downloads; turning off lowers ping jitter in online games.&#x0a;Recommended: Enabled (Optimal), Disabled (Gaming).&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Receive Segment Coalescing (RSC)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Disable in Gaming mode to reduce packet jitter" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbRsc" Grid.Column="1" Width="140" Tag="offload.rsc" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Packet Coalescing (RSC)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Bundles incoming packets; turn off for lower gaming jitter" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbRsc" Grid.Column="1" Width="185" Tag="offload.rsc" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="TCP Fast Open TFO">
+                                <Border x:Name="CardFastOpen" Grid.Row="3" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="TCP Fast Open TFO"
+                                        ToolTipService.ToolTip="Allows data to be sent during the initial TCP handshake with supported servers.&#x0a;Impact: Faster website and API connection startup.&#x0a;Recommended: Enabled.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TCP Fast Open (TFO)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Reduces handshake round-trips on modern servers" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbFastOpen" Grid.Column="1" Width="140" Tag="tcp.fastopen" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="TCP Fast Open (TFO)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Speeds up new connections to supported web servers" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbFastOpen" Grid.Column="1" Width="185" Tag="tcp.fastopen" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="TCP 1323 Timestamps">
+                                <Border x:Name="CardTimestamps" Grid.Row="3" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="TCP 1323 Timestamps"
+                                        ToolTipService.ToolTip="Adds a 12-byte timestamp header to every TCP packet.&#x0a;Impact: Turning off reduces per-packet overhead slightly.&#x0a;Recommended: Disabled.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TCP 1323 Timestamps" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Disable to save 12 bytes header overhead" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbTimestamps" Grid.Column="1" Width="140" Tag="tcp.timestamps" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Packet Timestamps (RFC 1323)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Disable to save 12 bytes of overhead on every packet" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbTimestamps" Grid.Column="1" Width="185" Tag="tcp.timestamps" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Time to Live DefaultTTL">
+                                <Border x:Name="CardTtl" Grid.Row="4" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Time to Live DefaultTTL"
+                                        ToolTipService.ToolTip="Maximum number of router hops a packet can cross before expiring.&#x0a;Impact: 64 is plenty for the modern internet and matches Linux/macOS.&#x0a;Recommended: 64 (Optimal) or 128 (Windows Default).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Time to Live (DefaultTTL)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Max IP hop limit (64 optimal, 128 default)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbTtl" Grid.Column="1" Width="140" Tag="reg.default_ttl" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Packet Hop Limit (DefaultTTL)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Max router hops per packet (64 optimal, 128 default)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbTtl" Grid.Column="1" Width="185" Tag="reg.default_ttl" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
 
-                                <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Loopback Large MTU BBR2 Guard">
+                                <Border x:Name="CardLoopbackMtu" Grid.Row="4" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,11" Tag="Loopback Large MTU BBR2 Guard"
+                                        ToolTipService.ToolTip="Prevents localhost/loopback connection stalls on Windows 11 24H2+ when BBR2 is active.&#x0a;Impact: Avoids local dev server or VPN freezes under BBR2.&#x0a;Recommended: Enabled with CUBIC, Disabled with BBR2.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Loopback Large MTU (BBR2 Guard)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Disable when using BBR2 on Win11 24H2+" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbLoopbackMtu" Grid.Column="1" Width="140" Tag="tcp.loopback_large_mtu" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Loopback Large MTU (BBR2 Guard)" FontWeight="SemiBold" FontSize="13" /><TextBlock Text="Automatically disabled when you switch to BBR2 on Win11" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbLoopbackMtu" Grid.Column="1" Width="185" Tag="tcp.loopback_large_mtu" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
                             </Grid>
@@ -469,7 +498,7 @@
                 </Grid>
 
                 <!-- 3. ADVANCED SETTINGS -->
-                <Grid x:Name="AdvancedPanel" Grid.Row="1" Visibility="Collapsed" RowSpacing="14">
+                <Grid x:Name="AdvancedPanel" Grid.Row="0" Visibility="Collapsed" RowSpacing="14">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -481,11 +510,19 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Advanced TCP/IP, Gaming &amp; Driver Tuning" Style="{ThemeResource TitleTextBlockStyle}" />
-                            <TextBlock Text="Fine-grained controls grouped by subsystem. Applied natively via .NET CIM and 64-bit HKLM Registry."
+                            <TextBlock Text="Advanced Gaming, Timeouts &amp; Driver Tuning" Style="{ThemeResource TitleTextBlockStyle}" />
+                            <TextBlock Text="Plain-English options backed by exact Windows Registry and adapter driver settings. Hover any card for details."
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{ThemeResource CaptionTextBlockStyle}" />
                         </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource SubtleActionButtonStyle}" Click="ResetDefaults_Click" Content="Reset Defaults" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RecommendedSettings_Click" ToolTipService.ToolTip="Loads safe, balanced Windows 10/11 recommended settings (previewed before applying)">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE735;" FontSize="12.5" Foreground="{ThemeResource FluentAccentBrush}" />
+                                    <TextBlock Text="Recommended Settings" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="ResetDefaults_Click" Content="Reset Defaults" />
+                        </StackPanel>
                     </Grid>
 
                     <ScrollViewer x:Name="AdvancedScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -495,130 +532,146 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
 
-                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="NetworkThrottlingIndex multimedia throttling">
+                                <Border x:Name="CardThrottling" Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Multimedia Network Throttling NetworkThrottlingIndex"
+                                        ToolTipService.ToolTip="Windows limits background network packets while playing audio or video.&#x0a;Impact: Disabling removes artificial throughput caps during media or gaming.&#x0a;Recommended: Disabled (Max Speed).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="NetworkThrottlingIndex" FontWeight="SemiBold" /><TextBlock Text="0xffffffff disables multimedia throttling (0x0000000a default)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbThrottling" Grid.Column="1" Width="145" Tag="reg.network_throttling" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Multimedia Network Throttling" FontWeight="SemiBold" /><TextBlock Text="Removes packet caps during media playback (NetworkThrottlingIndex)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbThrottling" Grid.Column="1" Width="195" Tag="reg.network_throttling" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="SystemResponsiveness CPU background">
+                                <Border x:Name="CardResponsiveness" Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="System Responsiveness CPU background"
+                                        ToolTipService.ToolTip="Percentage of CPU reserved for low-priority background tasks.&#x0a;Impact: Lower values prioritize active games and network processing.&#x0a;Recommended: 10% (Optimal) or 0% (Gaming).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="SystemResponsiveness" FontWeight="SemiBold" /><TextBlock Text="CPU % reserved for background tasks (10 optimal, 0 gaming)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbResponsiveness" Grid.Column="1" Width="145" Tag="reg.system_responsiveness" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Background CPU Reserve" FontWeight="SemiBold" /><TextBlock Text="CPU % held for background tasks (SystemResponsiveness)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbResponsiveness" Grid.Column="1" Width="195" Tag="reg.system_responsiveness" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="TcpAckFrequency Nagle">
+                                <Border x:Name="CardAckFreq" Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Immediate Packet ACKs TcpAckFrequency Nagle"
+                                        ToolTipService.ToolTip="Controls how often Windows sends TCP acknowledgments (ACKs).&#x0a;Impact: Immediate ACKs cut latency in online games at a tiny bandwidth cost.&#x0a;Recommended: Windows Default (Optimal) or Immediate ACKs (Gaming).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TcpAckFrequency (Nagle)" FontWeight="SemiBold" /><TextBlock Text="1 = immediate ACKs for gaming; NotSet = Windows default" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbAckFreq" Grid.Column="1" Width="145" Tag="nic.tcpackfreq" SelectionChanged="InteractiveNicCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Immediate Packet ACKs (Nagle)" FontWeight="SemiBold" /><TextBlock Text="Controls delayed ACK batching (TcpAckFrequency)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbAckFreq" Grid.Column="1" Width="195" Tag="nic.tcpackfreq" SelectionChanged="InteractiveNicCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="TCPNoDelay Nagle">
+                                <Border x:Name="CardNoDelay" Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Disable Packet Batching TCPNoDelay Nagle"
+                                        ToolTipService.ToolTip="Disables Nagle's algorithm so small game packets are sent immediately.&#x0a;Impact: Reduces micro-stutter and input latency in real-time games.&#x0a;Recommended: Windows Default (Optimal) or Low-Latency (Gaming).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TCPNoDelay (Nagle)" FontWeight="SemiBold" /><TextBlock Text="1 = disable coalescing for real-time apps; NotSet = default" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbNoDelay" Grid.Column="1" Width="145" Tag="nic.tcpnodelay" SelectionChanged="InteractiveNicCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Send Small Packets Instantly (Nagle)" FontWeight="SemiBold" /><TextBlock Text="Bypasses Nagle coalescing (TCPNoDelay)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbNoDelay" Grid.Column="1" Width="195" Tag="nic.tcpnodelay" SelectionChanged="InteractiveNicCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="TcpDelAckTicks Nagle">
+                                <Border x:Name="CardDelAckTicks" Grid.Row="2" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Delayed ACK Timer TcpDelAckTicks Nagle"
+                                        ToolTipService.ToolTip="Wait timer before sending a delayed TCP ACK (in 100ms steps).&#x0a;Impact: 0 ms eliminates ACK wait delay for real-time gaming.&#x0a;Recommended: Windows Default (Optimal) or 0 ms Instant (Gaming).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TcpDelAckTicks (Nagle)" FontWeight="SemiBold" /><TextBlock Text="0 = instant ACK for gaming; NotSet = 200ms default" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbDelAckTicks" Grid.Column="1" Width="145" Tag="nic.tcpdelackticks" SelectionChanged="InteractiveNicCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Delayed ACK Wait Timer" FontWeight="SemiBold" /><TextBlock Text="Wait time before sending ACKs (TcpDelAckTicks)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbDelAckTicks" Grid.Column="1" Width="195" Tag="nic.tcpdelackticks" SelectionChanged="InteractiveNicCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="AFD FastSendDatagramThreshold UDP">
+                                <Border x:Name="CardAfdFastSend" Grid.Row="2" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="UDP Fast Send Path AFD FastSendDatagramThreshold"
+                                        ToolTipService.ToolTip="Max UDP packet size handled by Windows' fast I/O path.&#x0a;Impact: Raising to 1500 bytes lets full-size UDP game/VoIP packets skip slow queuing.&#x0a;Recommended: 1500 bytes (Full Ethernet MTU).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="AFD FastSendDatagramThreshold" FontWeight="SemiBold" /><TextBlock Text="UDP fast I/O path threshold (1500 optimal, 1024 default)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbAfdFastSend" Grid.Column="1" Width="145" Tag="reg.afd_fast_send" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="UDP Fast-Path Threshold (AFD)" FontWeight="SemiBold" /><TextBlock Text="Lets full-size UDP packets use fast I/O (FastSendDatagramThreshold)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbAfdFastSend" Grid.Column="1" Width="195" Tag="reg.afd_fast_send" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
                             </Grid>
 
-                            <TextBlock Text="Retransmissions, Pacing &amp; Congestion Recovery" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource FluentAccentBrush}" Margin="0,4,0,0" />
+                            <TextBlock Text="Connection Timeouts &amp; Recovery" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource FluentAccentBrush}" Margin="0,4,0,0" />
                             <Grid x:Name="AdvRtoGrid" ColumnSpacing="12" RowSpacing="10">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
 
-                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Max SYN Retransmissions">
+                                <Border x:Name="CardMaxSyn" Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Max SYN Retransmissions handshake retries"
+                                        ToolTipService.ToolTip="How many times Windows retries an unreachable server before giving up.&#x0a;Impact: Faster failover when a server is offline.&#x0a;Recommended: 2 Retries.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Max SYN Retransmissions" FontWeight="SemiBold" /><TextBlock Text="Retries before failing unreachable handshake (2 optimal)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbMaxSyn" Grid.Column="1" Width="145" Tag="tcp.maxsynretx" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Connection Retry Attempts (Max SYN)" FontWeight="SemiBold" /><TextBlock Text="Retries before failing an unreachable server" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbMaxSyn" Grid.Column="1" Width="195" Tag="tcp.maxsynretx" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="NonSack Rtt Resiliency">
+                                <Border x:Name="CardNonSack" Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="NonSack Rtt Resiliency"
+                                        ToolTipService.ToolTip="Legacy workaround for old networks that don't support Selective Acknowledgments.&#x0a;Impact: Keeping off avoids unnecessary timeout inflation on modern networks.&#x0a;Recommended: Disabled.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="NonSack Rtt Resiliency" FontWeight="SemiBold" /><TextBlock Text="Keep Disabled on modern SACK networks" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbNonSack" Grid.Column="1" Width="145" Tag="tcp.nonsackrtt" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Legacy Non-SACK Resiliency" FontWeight="SemiBold" /><TextBlock Text="Keep off for modern routers and servers (NonSackRttResiliency)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbNonSack" Grid.Column="1" Width="195" Tag="tcp.nonsackrtt" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Initial RTO ms">
+                                <Border x:Name="CardInitialRto" Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Initial RTO Timeout ms"
+                                        ToolTipService.ToolTip="Initial wait time before resending a dropped connection packet.&#x0a;Impact: Lower values recover faster from brief Wi-Fi/ISP hiccups.&#x0a;Recommended: 2000 ms (Optimal) or 1000 ms (Gaming).&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Initial RTO (ms)" FontWeight="SemiBold" /><TextBlock Text="Initial retransmission timeout (2000 optimal, 1000 gaming)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbInitialRto" Grid.Column="1" Width="145" Tag="tcp.initialrto" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Initial Packet Timeout (Initial RTO)" FontWeight="SemiBold" /><TextBlock Text="Wait before resending a lost handshake packet" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbInitialRto" Grid.Column="1" Width="195" Tag="tcp.initialrto" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Min RTO ms">
+                                <Border x:Name="CardMinRto" Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Min RTO Timeout ms"
+                                        ToolTipService.ToolTip="Minimum floor for TCP retransmission timeout.&#x0a;Impact: 300 ms prevents premature resends over normal internet links.&#x0a;Recommended: 300 ms (Safe Baseline).&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Min RTO (ms)" FontWeight="SemiBold" /><TextBlock Text="Minimum retransmission floor (300ms safe baseline)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbMinRto" Grid.Column="1" Width="145" Tag="tcp.minrto" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Minimum Packet Timeout (Min RTO)" FontWeight="SemiBold" /><TextBlock Text="Lowest allowed retransmission wait time" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbMinRto" Grid.Column="1" Width="195" Tag="tcp.minrto" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="TCP Pacing Profile bufferbloat">
+                                <Border x:Name="CardPacing" Grid.Row="2" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="TCP Pacing Profile bufferbloat"
+                                        ToolTipService.ToolTip="Spreads outbound packet bursts evenly instead of dumping them all at once.&#x0a;Impact: Helps prevent router queue spikes (bufferbloat) on fast links.&#x0a;Recommended: Off or Initial Window (Gigabit+).&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TCP Pacing Profile" FontWeight="SemiBold" /><TextBlock Text="Paces outbound packet bursts to reduce micro-bufferbloat" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbPacing" Grid.Column="1" Width="145" Tag="tcp.pacing" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Outbound Packet Pacing" FontWeight="SemiBold" /><TextBlock Text="Smooths packet bursts to reduce router bufferbloat" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbPacing" Grid.Column="1" Width="195" Tag="tcp.pacing" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Hybrid Slow Start HyStart">
+                                <Border x:Name="CardHyStart" Grid.Row="2" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Hybrid Slow Start HyStart"
+                                        ToolTipService.ToolTip="Detects when a link is near capacity during connection ramp-up.&#x0a;Impact: Prevents sudden packet loss spikes when starting large transfers.&#x0a;Recommended: Enabled.&#x0a;Takes effect: Immediately.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="Hybrid Slow Start (HyStart)" FontWeight="SemiBold" /><TextBlock Text="Safely exits slow-start before queue overflow" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbHyStart" Grid.Column="1" Width="145" Tag="tcp.hystart" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Smart Ramp-Up (HyStart)" FontWeight="SemiBold" /><TextBlock Text="Safely exits slow-start before overwhelming your router" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbHyStart" Grid.Column="1" Width="195" Tag="tcp.hystart" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
                             </Grid>
 
-                            <TextBlock Text="Dynamic Ports &amp; QoS" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource FluentSuccessBrush}" Margin="0,4,0,0" />
+                            <TextBlock Text="Dynamic Ports &amp; Bandwidth Reservation (QoS)" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource FluentSuccessBrush}" Margin="0,4,0,0" />
                             <Grid x:Name="AdvQosGrid" ColumnSpacing="12" RowSpacing="10">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
 
-                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="MaxUserPort ephemeral ports">
+                                <Border x:Name="CardMaxUserPort" Grid.Row="0" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="MaxUserPort ephemeral ports"
+                                        ToolTipService.ToolTip="Expands the pool of temporary outbound ports Windows can open simultaneously.&#x0a;Impact: Prevents port exhaustion during heavy downloads, P2P, or dev workloads.&#x0a;Recommended: Expanded (65,534 Ports).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="MaxUserPort" FontWeight="SemiBold" /><TextBlock Text="65534 expands ephemeral pool; NotSet = Windows dynamic" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbMaxUserPort" Grid.Column="1" Width="145" Tag="reg.max_user_port" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Outbound Port Pool (MaxUserPort)" FontWeight="SemiBold" /><TextBlock Text="Max temporary ports for simultaneous connections" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbMaxUserPort" Grid.Column="1" Width="195" Tag="reg.max_user_port" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="TcpTimedWaitDelay TIME_WAIT">
+                                <Border x:Name="CardTimedWait" Grid.Row="0" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="Socket Reuse Delay TcpTimedWaitDelay TIME_WAIT"
+                                        ToolTipService.ToolTip="How long Windows holds a closed port before reusing it.&#x0a;Impact: 30 seconds recycles ports 4x faster without risking stale packets.&#x0a;Recommended: 30s (Fast Reuse).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="TcpTimedWaitDelay (s)" FontWeight="SemiBold" /><TextBlock Text="TIME_WAIT socket reuse delay (30s optimal, 120s default)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbTimedWait" Grid.Column="1" Width="145" Tag="reg.tcp_timed_wait_delay" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="Socket Reuse Delay (TcpTimedWaitDelay)" FontWeight="SemiBold" /><TextBlock Text="Wait time before closed ports can be reused" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbTimedWait" Grid.Column="1" Width="195" Tag="reg.tcp_timed_wait_delay" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="QoS NonBestEffortLimit bandwidth">
+                                <Border x:Name="CardQosLimit" Grid.Row="1" Grid.Column="0" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="QoS Bandwidth Cap NonBestEffortLimit"
+                                        ToolTipService.ToolTip="Removes Windows' 20% reservable QoS bandwidth ceiling.&#x0a;Impact: Ensures apps get 100% of available link speed when QoS policies are active.&#x0a;Recommended: No Limit (0%).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="QoS NonBestEffortLimit (%)" FontWeight="SemiBold" /><TextBlock Text="Reservable bandwidth limit (0 removes QoS cap)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbQosLimit" Grid.Column="1" Width="145" Tag="reg.qos_non_best_effort" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="QoS Reservable Bandwidth Cap" FontWeight="SemiBold" /><TextBlock Text="Removes the 20% QoS reservation limit (NonBestEffortLimit)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbQosLimit" Grid.Column="1" Width="195" Tag="reg.qos_non_best_effort" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
-                                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="QoS Do not use NLA">
+                                <Border x:Name="CardQosNla" Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceCardStyle}" Padding="14,10" Tag="QoS Bypass NLA Do not use NLA"
+                                        ToolTipService.ToolTip="Lets QoS packet prioritization work without waiting for Network Location Awareness.&#x0a;Impact: Ensures consistent DSCP/QoS tagging for VoIP and games.&#x0a;Recommended: Enabled (Bypass NLA).&#x0a;Takes effect: After Windows restart.">
                                     <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="2"><TextBlock Text="QoS: Do not use NLA" FontWeight="SemiBold" /><TextBlock Text="Bypass Network Location Awareness check (1 optimal)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
-                                        <ComboBox x:Name="CmbQosNla" Grid.Column="1" Width="145" Tag="reg.qos_do_not_use_nla" SelectionChanged="InteractiveCombo_Changed" />
+                                        <StackPanel Spacing="2"><TextBlock Text="QoS Direct Tagging (Bypass NLA)" FontWeight="SemiBold" /><TextBlock Text="Applies QoS priorities without NLA checks (Do not use NLA)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" /></StackPanel>
+                                        <ComboBox x:Name="CmbQosNla" Grid.Column="1" Width="195" Tag="reg.qos_do_not_use_nla" SelectionChanged="InteractiveCombo_Changed" />
                                     </Grid>
                                 </Border>
                             </Grid>
@@ -626,18 +679,34 @@
                             <TextBlock x:Name="DriverPropsHeader" Text="Selected Adapter Driver Properties" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource FluentPurpleBrush}" Margin="0,4,0,0" />
                             <ItemsRepeater x:Name="DriverPropsRepeater">
                                 <ItemsRepeater.Layout>
-                                    <UniformGridLayout MinItemWidth="320" MaximumRowsOrColumns="2" MinColumnSpacing="12" MinRowSpacing="8" ItemsStretch="Fill" />
+                                    <UniformGridLayout MinItemWidth="340" MaximumRowsOrColumns="2" MinColumnSpacing="12" MinRowSpacing="8" ItemsStretch="Fill" />
                                 </ItemsRepeater.Layout>
                                 <ItemsRepeater.ItemTemplate>
                                     <DataTemplate x:DataType="local:DriverPropRow">
                                         <Border Style="{StaticResource SurfaceCardStyle}" Padding="12,9">
-                                            <Grid ColumnSpacing="8">
+                                            <Grid ColumnSpacing="10">
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                 <StackPanel Spacing="1" VerticalAlignment="Center">
                                                     <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{x:Bind RegistryKeyword}" FontFamily="{StaticResource MonoFont}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                 </StackPanel>
-                                                <Border Grid.Column="1" CornerRadius="4" BorderBrush="{ThemeResource FluentAccentBorderBrush}" BorderThickness="1" Padding="8,3" Background="{ThemeResource FluentAccentSoftBrush}" VerticalAlignment="Center">
+                                                <!-- Interactive dropdown when driver exposes ValidDisplayValues -->
+                                                <ComboBox Grid.Column="1"
+                                                          Width="165"
+                                                          Visibility="{x:Bind ComboVisibility}"
+                                                          ItemsSource="{x:Bind ValidValues}"
+                                                          SelectedItem="{x:Bind SelectedValue, Mode=TwoWay}"
+                                                          Tag="{x:Bind RegistryKeyword}"
+                                                          SelectionChanged="DriverPropCombo_Changed" />
+                                                <!-- Crisp read-only tag when fixed -->
+                                                <Border Grid.Column="1"
+                                                        Visibility="{x:Bind BadgeVisibility}"
+                                                        CornerRadius="4"
+                                                        BorderBrush="{ThemeResource FluentAccentBorderBrush}"
+                                                        BorderThickness="1"
+                                                        Padding="8,3"
+                                                        Background="{ThemeResource FluentAccentSoftBrush}"
+                                                        VerticalAlignment="Center">
                                                     <TextBlock Text="{x:Bind DisplayValue}" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource FluentAccentBrush}" />
                                                 </Border>
                                             </Grid>
@@ -649,9 +718,10 @@
                     </ScrollViewer>
                 </Grid>
 
-                <!-- 4. DIAGNOSTICS & DNS -->
-                <Grid x:Name="DiagnosticsPanel" Grid.Row="1" Visibility="Collapsed" RowSpacing="12" Margin="0,0,20,0">
+                <!-- 4. DIAGNOSTICS, DNS & REPAIR -->
+                <Grid x:Name="DiagnosticsPanel" Grid.Row="0" Visibility="Collapsed" RowSpacing="10" Margin="0,0,20,0">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -659,13 +729,36 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Spacing="2">
-                        <TextBlock Text="BDP Calculator, DNS Benchmark &amp; Native ICMP Diagnostics" Style="{ThemeResource TitleTextBlockStyle}" />
-                        <TextBlock Text="Non-blocking iphlpapi.dll Path MTU discovery, graded latency sweeps, traceroute, and native DNS benchmarking."
+                        <TextBlock Text="Diagnostics, DNS Switcher &amp; Quick Repair" Style="{ThemeResource TitleTextBlockStyle}" />
+                        <TextBlock Text="Benchmark public DNS resolvers, switch DNS in one click, repair caches, calculate BDP/RWIN, and run Path MTU or latency tests."
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{ThemeResource CaptionTextBlockStyle}" />
                     </StackPanel>
 
-                    <Border Grid.Row="1" Style="{StaticResource HeroCardStyle}" Padding="14,12">
-                        <Grid ColumnSpacing="12">
+                    <!-- Quick DNS Switcher & Network Repair Card -->
+                    <Border Grid.Row="1" Style="{StaticResource HeroCardStyle}" Padding="14,11">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="DnsPresetCombo" Header="Quick IPv4 DNS Switcher (Target Adapter)" Width="245" SelectedIndex="0" />
+                            <Button Grid.Column="1" Style="{StaticResource PrimaryActionButtonStyle}" VerticalAlignment="Bottom" Click="ApplyDnsPreset_Click" Content="Apply DNS" />
+                            <Button x:Name="ApplyFastestDnsButton" Grid.Column="2" Style="{StaticResource SubtleActionButtonStyle}" VerticalAlignment="Bottom" Click="ApplyFastestDns_Click" Content="Apply Fastest" IsEnabled="False"
+                                    ToolTipService.ToolTip="Run Benchmark DNS first to enable 1-click fastest resolver switching" />
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
+                                <Button Style="{StaticResource SubtleActionButtonStyle}" Click="FlushDns_Click" Content="Flush DNS" />
+                                <Button Style="{StaticResource SubtleActionButtonStyle}" Click="FlushArp_Click" Content="Flush ARP" ToolTipService.ToolTip="Clears the local IP-to-MAC ARP table for your active adapter" />
+                                <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RenewDhcp_Click" Content="Renew DHCP" ToolTipService.ToolTip="Renews your IPv4 address lease from your router" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- BDP Calculator -->
+                    <Border Grid.Row="2" Style="{StaticResource SurfaceCardStyle}" Padding="14,10">
+                        <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
@@ -674,18 +767,19 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="BdpBandwidthBox" Header="Bandwidth" Text="100" Width="100" />
-                            <ComboBox x:Name="BdpUnitCombo" Grid.Column="1" Header="Unit" Width="88" SelectedIndex="0" />
-                            <TextBox x:Name="BdpLatencyBox" Grid.Column="2" Header="Latency (ms)" Text="40" Width="96" />
-                            <TextBox x:Name="BdpMtuBox" Grid.Column="3" Header="MTU" Text="1500" Width="80" />
-                            <Button Grid.Column="4" Style="{StaticResource PrimaryActionButtonStyle}" VerticalAlignment="Bottom" Click="CalculateBdp_Click" Content="Calculate" />
-                            <Border Grid.Column="5" Style="{StaticResource SubtleCardStyle}" Padding="12,8" VerticalAlignment="Bottom">
-                                <TextBlock x:Name="BdpResultText" Text="Enter bandwidth &amp; latency to compute MSS-aligned RWIN" FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="{ThemeResource FluentAccentBrush}" TextTrimming="CharacterEllipsis" />
+                            <TextBox x:Name="BdpBandwidthBox" Header="Bandwidth" Text="100" Width="96" />
+                            <ComboBox x:Name="BdpUnitCombo" Grid.Column="1" Header="Unit" Width="86" SelectedIndex="0" />
+                            <TextBox x:Name="BdpLatencyBox" Grid.Column="2" Header="Latency (ms)" Text="40" Width="92" />
+                            <TextBox x:Name="BdpMtuBox" Grid.Column="3" Header="MTU" Text="1500" Width="76" />
+                            <Button Grid.Column="4" Style="{StaticResource SubtleActionButtonStyle}" VerticalAlignment="Bottom" Click="CalculateBdp_Click" Content="Calculate BDP" />
+                            <Border Grid.Column="5" Style="{StaticResource SubtleCardStyle}" Padding="12,7" VerticalAlignment="Bottom">
+                                <TextBlock x:Name="BdpResultText" Text="Enter bandwidth &amp; latency to compute MSS-aligned RWIN" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{ThemeResource FluentAccentBrush}" TextTrimming="CharacterEllipsis" />
                             </Border>
                         </Grid>
                     </Border>
 
-                    <Border Grid.Row="2" Style="{StaticResource SurfaceCardStyle}" Padding="14,10">
+                    <!-- ICMP & DNS Benchmark Toolbar -->
+                    <Border Grid.Row="3" Style="{StaticResource SurfaceCardStyle}" Padding="14,10">
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -694,7 +788,7 @@
                             <TextBox x:Name="DiagHostsBox" Header="Target Hosts (comma-separated)" Text="1.1.1.1, 8.8.8.8, 9.9.9.9" />
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
                                 <ProgressRing x:Name="DiagSpinner" Width="20" Height="20" IsActive="False" Visibility="Collapsed" VerticalAlignment="Center" />
-                                <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RunDnsBenchmark_Click" Content="Benchmark DNS" ToolTipService.ToolTip="Concurrently benchmark Cloudflare, Google, Quad9, AdGuard &amp; OpenDNS" />
+                                <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RunDnsBenchmark_Click" Content="Benchmark DNS" />
                                 <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RunMtu_Click" Content="Largest MTU" />
                                 <Button Style="{StaticResource PrimaryActionButtonStyle}" Click="RunLatency_Click" Content="Latency Sweep" />
                                 <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RunTrace_Click" Content="Trace" />
@@ -705,7 +799,7 @@
                         </Grid>
                     </Border>
 
-                    <Border Grid.Row="3" Style="{StaticResource TerminalCardStyle}" Padding="14">
+                    <Border Grid.Row="4" Style="{StaticResource TerminalCardStyle}" Padding="14">
                         <TextBox x:Name="DiagOutputBox"
                                  IsReadOnly="True"
                                  AcceptsReturn="True"
@@ -720,8 +814,8 @@
                     </Border>
                 </Grid>
 
-                <!-- 5. SNAPSHOTS & ROLLBACK -->
-                <Grid x:Name="SnapshotsPanel" Grid.Row="1" Visibility="Collapsed" RowSpacing="12" Margin="0,0,20,0">
+                <!-- 5. SNAPSHOTS & RESTORE (MULTI-SELECT CHECKBOXES + PROMINENT HIGHLIGHT) -->
+                <Grid x:Name="SnapshotsPanel" Grid.Row="0" Visibility="Collapsed" RowSpacing="12" Margin="0,0,20,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -734,65 +828,79 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Snapshots &amp; 1-Click Rollback" Style="{ThemeResource TitleTextBlockStyle}" />
-                            <TextBlock Text="Every change automatically saves a verified pre-change JSON snapshot before touching system state."
+                            <TextBlock Text="Snapshots &amp; 1-Click Restore" Style="{ThemeResource TitleTextBlockStyle}" />
+                            <TextBlock Text="Select one snapshot to inspect or restore, or check multiple snapshots to delete in bulk."
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{ThemeResource CaptionTextBlockStyle}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <CheckBox x:Name="SelectAllSnapshotsCheck" Content="Select All" MinWidth="0" VerticalAlignment="Center" Checked="SelectAllSnapshots_Changed" Unchecked="SelectAllSnapshots_Changed" />
                             <Button Style="{StaticResource SubtleActionButtonStyle}" Click="RefreshSnapshots_Click" Content="Refresh" />
                             <Button Style="{StaticResource SubtleActionButtonStyle}" Click="OpenSnapshotsFolder_Click" Content="Open Folder" />
-                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="DeleteSnapshot_Click" Content="Delete" />
-                            <Button Style="{StaticResource PrimaryActionButtonStyle}" Click="RollbackSelected_Click" Content="1-Click Rollback Selected" />
+                            <Button x:Name="InspectSnapshotButton" Style="{StaticResource SubtleActionButtonStyle}" Click="InspectSnapshot_Click" Content="Inspect" IsEnabled="False" />
+                            <Button x:Name="DeleteSnapshotsButton" Style="{StaticResource SubtleActionButtonStyle}" Click="DeleteSelectedSnapshots_Click" Content="Delete Selected" IsEnabled="False" />
+                            <Button x:Name="RollbackSnapshotButton" Style="{StaticResource PrimaryActionButtonStyle}" Click="RollbackSelected_Click" Content="Restore Selected" IsEnabled="False" />
                         </StackPanel>
                     </Grid>
 
                     <TextBlock x:Name="SnapshotsEmptyText"
                                Grid.Row="1"
                                Visibility="Collapsed"
-                               Text="No snapshots yet. A timestamped backup will appear here automatically the first time you apply changes."
+                               Text="No backups yet. A timestamped restore point will appear here automatically the first time you apply changes."
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                FontSize="13" />
 
-                    <ListView x:Name="SnapshotsList" Grid.Row="2" SelectionMode="Single">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Padding" Value="0,3" />
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="local:SnapshotDisplayRow">
-                                <Border Style="{StaticResource SurfaceCardStyle}" Padding="14,11">
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border Width="34" Height="34" CornerRadius="6" Background="{ThemeResource FluentAccentSoftBrush}" BorderBrush="{ThemeResource FluentAccentBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE81C;" FontSize="15" Foreground="{ThemeResource FluentAccentBrush}" />
-                                        </Border>
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{x:Bind ProfileName}" FontWeight="SemiBold" FontSize="13.5" />
-                                                <Border Background="{ThemeResource FluentTagBgBrush}" BorderBrush="{ThemeResource FluentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{x:Bind ChangeCountLabel}" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                </Border>
+                    <ScrollViewer x:Name="SnapshotsScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <ItemsRepeater x:Name="SnapshotsRepeater" Margin="0,0,20,8">
+                            <ItemsRepeater.Layout>
+                                <StackLayout Spacing="8" />
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate x:DataType="local:SnapshotDisplayRow">
+                                    <Border Background="{x:Bind CardBackground, Mode=OneWay}"
+                                            BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                            BorderThickness="{x:Bind CardBorderThickness, Mode=OneWay}"
+                                            CornerRadius="8"
+                                            Padding="14,11">
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                                      MinWidth="0"
+                                                      Padding="0"
+                                                      VerticalAlignment="Center"
+                                                      Checked="SnapshotCheck_Changed"
+                                                      Unchecked="SnapshotCheck_Changed"
+                                                      AutomationProperties.Name="{x:Bind SnapshotId}" />
+                                            <Border Grid.Column="1" Width="34" Height="34" CornerRadius="6" Background="{ThemeResource FluentAccentSoftBrush}" BorderBrush="{ThemeResource FluentAccentBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE81C;" FontSize="15" Foreground="{ThemeResource FluentAccentBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{x:Bind ProfileName}" FontWeight="SemiBold" FontSize="13.5" />
+                                                    <Border Background="{ThemeResource FluentTagBgBrush}" BorderBrush="{ThemeResource FluentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                                        <TextBlock Text="{x:Bind ChangeCountLabel}" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{x:Bind SnapshotId}" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <TextBlock Text="{x:Bind SnapshotId}" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="2" Text="{x:Bind OsBuildLabel}" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="3" Text="{x:Bind TimestampLocal}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                                            <TextBlock Grid.Column="3" Text="{x:Bind OsBuildLabel}" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="4" Text="{x:Bind TimestampLocal}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </ScrollViewer>
                 </Grid>
 
                 <!-- 6. APP SETTINGS -->
-                <Grid x:Name="AppSettingsPanel" Grid.Row="1" Visibility="Collapsed" RowSpacing="14">
+                <Grid x:Name="AppSettingsPanel" Grid.Row="0" Visibility="Collapsed" RowSpacing="14">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -836,7 +944,7 @@
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                         <StackPanel Spacing="2">
                                             <TextBlock Text="Software Updates" FontWeight="SemiBold" FontSize="14" />
-                                            <TextBlock x:Name="UpdateStatusText" Text="Click Check Now to query GitHub Releases (with version.txt fallback)." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            <TextBlock x:Name="UpdateStatusText" Text="Click Check Now to query GitHub Releases." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                         </StackPanel>
                                         <Button x:Name="CheckUpdatesButton" Grid.Column="1" Style="{StaticResource PrimaryActionButtonStyle}" Content="Check Now" Click="CheckUpdatesButton_Click" VerticalAlignment="Center" />
                                         <Button x:Name="DownloadUpdateButton" Grid.Column="2" Style="{StaticResource SubtleActionButtonStyle}" Content="Releases" Click="DownloadOrOpenRelease_Click" VerticalAlignment="Center" />
@@ -856,7 +964,7 @@
                                         <Image Grid.Column="0" Source="Assets/fluentnet-icon.png" Width="38" Height="38" VerticalAlignment="Center" />
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="Developed by Varun Agarwal • Sentinel Labs" FontWeight="SemiBold" FontSize="14" />
-                                            <TextBlock x:Name="AboutVersionText" Text="FluentNet • 64-bit Windows Network Stack Optimizer • MIT Open Source • Zero Telemetry" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            <TextBlock x:Name="AboutVersionText" Text="FluentNet • Windows Network Optimizer • MIT Open Source • Zero Telemetry" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                         </StackPanel>
                                         <Border Grid.Column="2" Background="{ThemeResource FluentAccentSoftBrush}" BorderBrush="{ThemeResource FluentAccentBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="9,3" VerticalAlignment="Center">
                                             <TextBlock Text="OPEN SOURCE" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource FluentAccentBrush}" />
@@ -873,9 +981,9 @@
                     </ScrollViewer>
                 </Grid>
 
-                <!-- CRISP SEGMENTED PROFILE & ACTION BAR -->
-                <Border Grid.Row="2" Style="{StaticResource HeroCardStyle}" Padding="12,9" Margin="0,0,20,0">
-                    <Grid ColumnSpacing="12">
+                <!-- CRISP SEGMENTED PROFILE, SAVE/LOAD & ACTION BAR -->
+                <Border Grid.Row="1" Style="{StaticResource HeroCardStyle}" Padding="12,9" Margin="0,0,20,0">
+                    <Grid ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -891,7 +999,9 @@
                             </StackPanel>
                         </Border>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="SaveCustomProfile_Click" Content="Save Profile" ToolTipService.ToolTip="Save current tuning selections to a reusable JSON profile" />
+                            <Button Style="{StaticResource SubtleActionButtonStyle}" Click="LoadCustomProfile_Click" Content="Load Profile" ToolTipService.ToolTip="Load a previously saved JSON profile" />
                             <Button Style="{StaticResource SubtleActionButtonStyle}" Click="ExportScripts_Click" Content="Export .ps1 / .reg" />
                             <Button x:Name="ApplyChangesButton" Style="{StaticResource PrimaryActionButtonStyle}" Click="PreviewSelected_Click" Content="Review &amp; Apply" />
                         </StackPanel>
@@ -899,5 +1009,60 @@
                 </Border>
             </Grid>
         </NavigationView>
+
+        <!-- OPTION 1A: FLOATING TOP-RIGHT AUTO-DISMISS TOAST OVERLAY (NEVER SHIFTS LAYOUT) -->
+        <Border x:Name="ToastOverlay"
+                Grid.Row="1"
+                Visibility="Collapsed"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,14,28,0"
+                MinWidth="320"
+                MaxWidth="460"
+                CornerRadius="8"
+                BorderThickness="1"
+                Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource FluentBorderStrongBrush}"
+                PointerEntered="ToastOverlay_PointerEntered"
+                PointerExited="ToastOverlay_PointerExited"
+                Canvas.ZIndex="100">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="3" />
+                </Grid.RowDefinitions>
+                <Grid Padding="14,11" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="ToastIconBox" Width="28" Height="28" CornerRadius="4" VerticalAlignment="Top">
+                        <FontIcon x:Name="ToastIcon" Glyph="&#xE73E;" FontSize="13" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock x:Name="ToastTitle" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap" />
+                        <TextBlock x:Name="ToastMessage" FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button Grid.Column="2"
+                            Click="DismissToast_Click"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="6,4"
+                            VerticalAlignment="Top"
+                            AutomationProperties.Name="Dismiss notification">
+                        <FontIcon Glyph="&#xE711;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Button>
+                </Grid>
+                <ProgressBar x:Name="ToastCountdownBar"
+                             Grid.Row="1"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="100"
+                             Height="3"
+                             Background="Transparent"
+                             Foreground="{ThemeResource FluentSuccessBrush}" />
+            </Grid>
+        </Border>
     </Grid>
 </Window>

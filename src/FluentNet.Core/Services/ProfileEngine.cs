@@ -34,7 +34,6 @@ public sealed class ProfileEngine
         {
             foreach (NetworkParameterState p in report.Parameters)
             {
-                // For Registry parameters, deleting the custom override (NotSet) cleanly restores Windows defaults.
                 map[p.Id] = p.SourceKind == ParameterSourceKind.Registry
                     ? "NotSet"
                     : p.WindowsDefaultValue;
@@ -45,7 +44,6 @@ public sealed class ProfileEngine
 
         bool isGaming = profile == ProfileKind.GamingLowLatency;
 
-        // Core TCP/IP settings (all directly writable & verifiable on Windows 10/11)
         map["tcp.autotuning"] = "Normal";
         map["tcp.heuristics"] = "Disabled";
         map["tcp.ecn"] = "Disabled";
@@ -61,20 +59,13 @@ public sealed class ProfileEngine
         bool useBbr2 = preferBbr2 && report.OsInfo.SupportsBbr2;
         map["tcp.congestion"] = useBbr2 ? "BBR2" : "CUBIC";
 
-        if (useBbr2 && report.OsInfo.RequiresBbr2LoopbackGuard)
-        {
-            // Prevent Win11 24H2/25H2 localhost/loopback stalls when BBR2 is active
-            map["tcp.loopback_large_mtu"] = "Disabled";
-        }
-        else
-        {
-            map["tcp.loopback_large_mtu"] = "Enabled";
-        }
+        map["tcp.loopback_large_mtu"] = (useBbr2 && report.OsInfo.RequiresBbr2LoopbackGuard)
+            ? "Disabled"
+            : "Enabled";
 
         map["offload.rss"] = "Enabled";
         map["offload.rsc"] = isGaming ? "Disabled" : "Enabled";
 
-        // 64-bit Registry tuning
         map["reg.default_ttl"] = "64";
         map["reg.max_user_port"] = "65534";
         map["reg.tcp_timed_wait_delay"] = "30";
@@ -100,7 +91,6 @@ public sealed class ProfileEngine
             }
             else
             {
-                // In Optimal mode, keep Windows default Nagle behavior (NotSet == default 2/0/2)
                 map[$"nic.{guid}.tcpackfreq"] = "NotSet";
                 map[$"nic.{guid}.tcpnodelay"] = "NotSet";
                 map[$"nic.{guid}.tcpdelackticks"] = "NotSet";
@@ -108,5 +98,60 @@ public sealed class ProfileEngine
         }
 
         return map;
+    }
+
+    /// <summary>
+    /// Computes speed-tier-aware Windows 10/11 tuning overrides when the user drags the Connection Speed slider.
+    /// Grounded in real modern Windows TCP/IP parameters (no legacy WinXP static RWIN snake-oil).
+    /// </summary>
+    public IReadOnlyDictionary<string, string> BuildSpeedTierOverrides(int speedMbps)
+    {
+        var overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["tcp.autotuning"] = "Normal",
+            ["tcp.heuristics"] = "Disabled",
+            ["offload.rss"] = "Enabled",
+            ["reg.default_ttl"] = "64",
+            ["reg.qos_non_best_effort"] = "0"
+        };
+
+        if (speedMbps < 50)
+        {
+            // Low-bandwidth / DSL / Cellular: conservative RTO & retry budget, pacing off
+            overrides["tcp.initialrto"] = "3000";
+            overrides["tcp.maxsynretx"] = "3";
+            overrides["tcp.pacing"] = "Off";
+            overrides["offload.rsc"] = "Enabled";
+            overrides["reg.afd_fast_send"] = "1024";
+            overrides["reg.tcp_timed_wait_delay"] = "60";
+            overrides["reg.network_throttling"] = "0x0000000a";
+        }
+        else if (speedMbps < 300)
+        {
+            // Broadband / Cable / Mid-tier Fiber
+            overrides["tcp.initialrto"] = "2000";
+            overrides["tcp.maxsynretx"] = "2";
+            overrides["tcp.pacing"] = "Off";
+            overrides["offload.rsc"] = "Enabled";
+            overrides["reg.afd_fast_send"] = "1500";
+            overrides["reg.max_user_port"] = "65534";
+            overrides["reg.tcp_timed_wait_delay"] = "30";
+            overrides["reg.network_throttling"] = "0xffffffff";
+        }
+        else
+        {
+            // Gigabit / Multi-Gig Fiber / Wi-Fi 6E & Wi-Fi 7
+            overrides["tcp.initialrto"] = "1000";
+            overrides["tcp.maxsynretx"] = "2";
+            overrides["tcp.pacing"] = "InitialWindow";
+            overrides["offload.rsc"] = "Enabled";
+            overrides["reg.afd_fast_send"] = "1500";
+            overrides["reg.max_user_port"] = "65534";
+            overrides["reg.tcp_timed_wait_delay"] = "30";
+            overrides["reg.network_throttling"] = "0xffffffff";
+            overrides["reg.system_responsiveness"] = "10";
+        }
+
+        return overrides;
     }
 }

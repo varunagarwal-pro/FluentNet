@@ -23,11 +23,10 @@ public sealed class HostScanner
             .ReadAllAsync(adapters, cancellationToken)
             .ConfigureAwait(false);
 
-        var allParams = new List<NetworkParameterState>(cimTask.Result.Parameters.Count + regParams.Count + adapters.Count * 2);
+        var allParams = new List<NetworkParameterState>(cimTask.Result.Parameters.Count + regParams.Count + adapters.Count * 3);
         allParams.AddRange(cimTask.Result.Parameters);
         allParams.AddRange(regParams);
 
-        // Expose per-adapter MTU and editable NIC Driver Advanced Properties in the unified parameter model
         foreach (NetworkAdapterInfo nic in adapters.Where(a => a.MediaKind is AdapterMediaKind.Ethernet or AdapterMediaKind.WiFi))
         {
             if (nic.InterfaceIndex > 0)
@@ -38,11 +37,28 @@ public sealed class HostScanner
                     Category: "General",
                     CurrentValue: nic.Ipv4Mtu.ToString(),
                     WindowsDefaultValue: nic.IsPppoe ? "1492" : "1500",
-                    ExactPath: $"MSFT_NetIPInterface[ifIndex={nic.InterfaceIndex}].NlMtuBytes",
+                    ExactPath: $"MSFT_NetIPInterface[ifIndex={nic.InterfaceIndex}].NlMtu",
                     SourceKind: ParameterSourceKind.Cim,
                     SupportStatus: ParameterSupportStatus.Supported,
                     RequiresReboot: false,
-                    Description: "Maximum Transmission Unit in bytes (1500 Ethernet/Wi-Fi, 1492 PPPoE)"));
+                    Description: "Maximum packet size in bytes (1500 Ethernet/Wi-Fi, 1492 PPPoE)"));
+
+                string currentDns = nic.DnsServers is { Count: > 0 }
+                    ? string.Join(",", nic.DnsServers.Where(d => !d.Contains(':')).Take(2))
+                    : "DHCP";
+                if (string.IsNullOrWhiteSpace(currentDns)) currentDns = "DHCP";
+
+                allParams.Add(new NetworkParameterState(
+                    Id: $"nic.{nic.InterfaceGuid}.dns",
+                    DisplayName: $"[{nic.Alias}] IPv4 DNS Servers",
+                    Category: "DNS",
+                    CurrentValue: currentDns,
+                    WindowsDefaultValue: "DHCP",
+                    ExactPath: $"MSFT_NetClientDnsServerAddress[ifIndex={nic.InterfaceIndex}].ServerAddresses",
+                    SourceKind: ParameterSourceKind.Cim,
+                    SupportStatus: ParameterSupportStatus.Supported,
+                    RequiresReboot: false,
+                    Description: "IPv4 DNS resolvers for this adapter (comma-separated or DHCP)"));
             }
 
             foreach (AdapterAdvancedPropertyInfo prop in nic.AdvancedProperties)

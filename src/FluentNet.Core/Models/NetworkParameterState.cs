@@ -55,3 +55,9 @@ public sealed record ApplyReport(
     bool AllSucceeded,
     IReadOnlyList<ApplyItemResult> Results,
     string? SnapshotPath = null);
+
+public sealed record CustomProfileDocument(
+    string ProfileName,
+    DateTimeOffset ExportedAtUtc,
+    string AppVersion,
+    Dictionary<string, string> Settings);

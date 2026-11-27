@@ -45,6 +45,17 @@ public sealed class UiAndEngineRegressionTests
     }
 
     [Fact]
+    public void ApplyEngine_UsesNlMtu_NotNlMtuBytes_And_ZeroPowerShell()
+    {
+        string applyPath = Path.Combine(RepoRoot, "src", "FluentNet.Core", "Services", "ApplyEngine.cs");
+        string source = File.ReadAllText(applyPath);
+        Assert.DoesNotContain("powershell.exe", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\"NlMtuBytes\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"NlMtu\"", source, StringComparison.Ordinal);
+        Assert.Contains("ModifyInstance", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DiffDialog_UsesDedicatedWideReviewDialog_WithOverriddenMaxWidth()
     {
         string appDir = Path.Combine(RepoRoot, "src", "FluentNet.App");
@@ -58,12 +69,16 @@ public sealed class UiAndEngineRegressionTests
     }
 
     [Fact]
-    public void ApplyEngine_DoesNotSpawnPowerShell()
+    public void ProfileEngine_SpeedTierOverrides_AdaptAcrossBandwidthTiers()
     {
-        string applyPath = Path.Combine(RepoRoot, "src", "FluentNet.Core", "Services", "ApplyEngine.cs");
-        string source = File.ReadAllText(applyPath);
-        Assert.DoesNotContain("powershell.exe", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("ModifyInstance", source, StringComparison.Ordinal);
+        var engine = new ProfileEngine();
+        IReadOnlyDictionary<string, string> low = engine.BuildSpeedTierOverrides(25);
+        IReadOnlyDictionary<string, string> gig = engine.BuildSpeedTierOverrides(1000);
+
+        Assert.Equal("3000", low["tcp.initialrto"]);
+        Assert.Equal("1000", gig["tcp.initialrto"]);
+        Assert.Equal("InitialWindow", gig["tcp.pacing"]);
+        Assert.Equal("0xffffffff", gig["reg.network_throttling"]);
     }
 
     [Fact]
