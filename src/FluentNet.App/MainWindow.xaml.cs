@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using FluentNet.Core.Models;
@@ -6,8 +5,10 @@ using FluentNet.Core.Serialization;
 using FluentNet.Core.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.UI;
 
 namespace FluentNet.App;
@@ -15,6 +16,7 @@ namespace FluentNet.App;
 public sealed record AdapterDisplayRow(
     string Alias,
     string Description,
+    string NetworkMeta,
     string SpeedAndMtu,
     string IpAddress,
     string StatusLabel,
@@ -22,16 +24,33 @@ public sealed record AdapterDisplayRow(
     Brush StatusFg,
     string IconPath);
 
+public sealed record StackChipRow(
+    string Label,
+    string Subtitle,
+    string ValueText,
+    Brush DotBrush,
+    Brush BadgeBg,
+    Brush BadgeFg);
+
 public sealed record DriverPropRow(
     string DisplayName,
     string RegistryKeyword,
     string DisplayValue);
+
+public sealed record SnapshotDisplayRow(
+    string FilePath,
+    string SnapshotId,
+    string ProfileName,
+    string ChangeCountLabel,
+    string OsBuildLabel,
+    string TimestampLocal);
 
 public sealed partial class MainWindow : Window
 {
     private readonly HostScanner _scanner = new();
     private readonly ProfileEngine _profileEngine = new();
     private readonly DiffEngine _diffEngine = new();
+    private readonly ApplyEngine _applyEngine = new();
     private readonly SnapshotManager _snapshotManager = new();
     private readonly IcmpDiagnosticsService _icmp = new();
     private readonly UpdateService _updater = new();
@@ -39,15 +58,20 @@ public sealed partial class MainWindow : Window
     private HostScanReport? _lastReport;
     private UpdateCheckResult? _lastUpdateCheck;
     private Dictionary<string, string> _customOverrides = new(StringComparer.OrdinalIgnoreCase);
+    private ProfileKind _activeProfile = ProfileKind.RecommendedOptimal;
     private CancellationTokenSource? _diagCts;
     private bool _syncingControls;
     private string _searchQuery = string.Empty;
     private readonly string _appVersion;
 
     private static readonly Brush GreenBrush = new SolidColorBrush(Color.FromArgb(255, 16, 185, 129));
+    private static readonly Brush AmberBrush = new SolidColorBrush(Color.FromArgb(255, 245, 158, 11));
+    private static readonly Brush AccentBrush = new SolidColorBrush(Color.FromArgb(255, 56, 189, 248));
     private static readonly Brush MutedBrush = new SolidColorBrush(Color.FromArgb(255, 148, 163, 184));
-    private static readonly Brush UpBgBrush = new SolidColorBrush(Color.FromArgb(40, 16, 185, 129));
-    private static readonly Brush DownBgBrush = new SolidColorBrush(Color.FromArgb(40, 148, 163, 184));
+    private static readonly Brush UpBgBrush = new SolidColorBrush(Color.FromArgb(36, 16, 185, 129));
+    private static readonly Brush AmberBgBrush = new SolidColorBrush(Color.FromArgb(36, 245, 158, 11));
+    private static readonly Brush AccentBgBrush = new SolidColorBrush(Color.FromArgb(36, 56, 189, 248));
+    private static readonly Brush DownBgBrush = new SolidColorBrush(Color.FromArgb(32, 148, 163, 184));
 
     public MainWindow()
     {
@@ -58,9 +82,13 @@ public sealed partial class MainWindow : Window
         InitializeDropdownSources();
         SnapshotFolderText.Text = _snapshotManager.SnapshotDirectory;
         _appVersion = UpdateService.GetInstalledVersion(Assembly.GetExecutingAssembly());
-        AppTitleBar.Subtitle = $"64-Bit Network Stack Optimizer • v{_appVersion}";
+        AppTitleBar.Subtitle = $"64-Bit Native Network Optimizer • v{_appVersion}";
         UpdateNavTitle.Text = $"v{_appVersion} • Check Updates";
         AboutVersionText.Text = $"FluentNet v{_appVersion} • 64-bit Windows Network Stack Optimizer • MIT Open Source • Zero Telemetry";
+
+        bool isElevated = ElevationLauncher.IsProcessElevated();
+        PrivilegePillText.Text = isElevated ? "Administrator (Direct .NET Apply)" : "Standard Mode (On-Demand UAC)";
+        PrivilegePillText.Foreground = isElevated ? GreenBrush : MutedBrush;
 
         _ = RunHostScanAsync();
         _ = CheckForUpdatesBackgroundAsync();
@@ -72,25 +100,35 @@ public sealed partial class MainWindow : Window
         CmbAutoTuning.ItemsSource = new[] { "Normal", "Disabled", "HighlyRestricted", "Restricted", "Experimental" };
         CmbHeuristics.ItemsSource = new[] { "Disabled", "Enabled" };
         CmbCongestion.ItemsSource = new[] { "CUBIC", "CTCP", "BBR2", "Default" };
-        CmbEcn.ItemsSource = new[] { "Default", "Enabled", "Disabled" };
+        CmbEcn.ItemsSource = new[] { "Disabled", "Enabled", "Default" };
         CmbRss.ItemsSource = new[] { "Enabled", "Disabled" };
         CmbRsc.ItemsSource = new[] { "Enabled", "Disabled" };
+        CmbFastOpen.ItemsSource = new[] { "Enabled", "Disabled" };
         CmbTimestamps.ItemsSource = new[] { "Disabled", "Enabled", "Default" };
         CmbTtl.ItemsSource = new[] { "64", "128", "255" };
+        CmbLoopbackMtu.ItemsSource = new[] { "Enabled", "Disabled" };
 
-        CmbThrottling.ItemsSource = new[] { "0xffffffff", "10", "30" };
+        CmbThrottling.ItemsSource = new[] { "0xffffffff", "0x0000000a", "0x0000001e" };
         CmbResponsiveness.ItemsSource = new[] { "0", "10", "20" };
-        CmbAckFreq.ItemsSource = new[] { "1", "2" };
-        CmbNoDelay.ItemsSource = new[] { "0", "1" };
-        CmbDelAckTicks.ItemsSource = new[] { "0", "1", "2" };
+        CmbAckFreq.ItemsSource = new[] { "NotSet", "1", "2" };
+        CmbNoDelay.ItemsSource = new[] { "NotSet", "0", "1" };
+        CmbDelAckTicks.ItemsSource = new[] { "NotSet", "0", "1", "2" };
+        CmbAfdFastSend.ItemsSource = new[] { "1500", "1024", "NotSet" };
+
         CmbMaxSyn.ItemsSource = new[] { "2", "3", "4" };
         CmbNonSack.ItemsSource = new[] { "Disabled", "Enabled" };
         CmbInitialRto.ItemsSource = new[] { "1000", "2000", "3000" };
         CmbMinRto.ItemsSource = new[] { "300", "200", "100" };
-        CmbMaxUserPort.ItemsSource = new[] { "65534", "49152-65535 (Dynamic)" };
-        CmbTimedWait.ItemsSource = new[] { "30", "60", "120" };
-        CmbQosLimit.ItemsSource = new[] { "0", "20" };
-        CmbQosNla.ItemsSource = new[] { "1", "0" };
+        CmbPacing.ItemsSource = new[] { "Off", "InitialWindow", "SlowStart", "Always" };
+        CmbHyStart.ItemsSource = new[] { "Enabled", "Disabled" };
+
+        CmbMaxUserPort.ItemsSource = new[] { "65534", "NotSet" };
+        CmbTimedWait.ItemsSource = new[] { "30", "60", "120", "NotSet" };
+        CmbQosLimit.ItemsSource = new[] { "0", "20", "NotSet" };
+        CmbQosNla.ItemsSource = new[] { "1", "0", "NotSet" };
+
+        BdpUnitCombo.ItemsSource = new[] { "Mbps", "Gbps" };
+        BdpUnitCombo.SelectedIndex = 0;
 
         CmbTheme.ItemsSource = new[] { "System Default", "Dark", "Light" };
         CmbTheme.SelectedIndex = 0;
@@ -105,6 +143,27 @@ public sealed partial class MainWindow : Window
         args.Handled = true;
     }
 
+    private async void AccelRescan_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        await RunHostScanAsync();
+    }
+
+    private void AccelClearSearch_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (!string.IsNullOrEmpty(TitleSearchBox.Text))
+        {
+            TitleSearchBox.Text = string.Empty;
+            args.Handled = true;
+        }
+    }
+
+    private void AccelNav1_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { NavView.SelectedItem = NavDashboard; args.Handled = true; }
+    private void AccelNav2_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { NavView.SelectedItem = NavGeneral; args.Handled = true; }
+    private void AccelNav3_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { NavView.SelectedItem = NavAdvanced; args.Handled = true; }
+    private void AccelNav4_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { NavView.SelectedItem = NavDiagnostics; args.Handled = true; }
+    private void AccelNav5_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { NavView.SelectedItem = NavSnapshots; args.Handled = true; }
+
     private void TitleSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         _searchQuery = sender.Text.Trim();
@@ -112,7 +171,7 @@ public sealed partial class MainWindow : Window
         RefreshDriverProperties();
     }
 
-    private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    private async void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         string tag = args.IsSettingsSelected
             ? "app_settings"
@@ -127,13 +186,13 @@ public sealed partial class MainWindow : Window
 
         if (tag == "snapshots")
         {
-            SnapshotsList.ItemsSource = _snapshotManager.ListSnapshotFiles().ToList();
+            await RefreshSnapshotsAsync();
         }
     }
 
     private async Task RunHostScanAsync()
     {
-        OverviewSubtitleText.Text = "Scanning OS build, network adapters, CIM/WMI TCP templates, and 64-bit Registry...";
+        ParamsCountPillText.Text = "Scanning stack...";
         StatusBanner.IsOpen = false;
 
         try
@@ -146,16 +205,22 @@ public sealed partial class MainWindow : Window
 
             NetworkAdapterInfo? primary = _lastReport.Adapters.FirstOrDefault(a => a.IsUp);
             KpiNicText.Text = primary?.Alias ?? "None Active";
-            KpiLinkText.Text = primary is not null ? $"{primary.LinkSpeedMbps} Mbps • MTU {primary.Ipv4Mtu}" : "—";
+            KpiLinkText.Text = primary is not null
+                ? $"{primary.LinkSpeedMbps} Mbps • MTU {primary.Ipv4Mtu}"
+                : "No active link";
 
-            string? cong = _lastReport.Parameters.FirstOrDefault(p => p.Id == "tcp.congestion")?.CurrentValue;
-            KpiCongestionText.Text = cong ?? "CUBIC";
-            KpiBbrGuardText.Text = os.RequiresBbr2LoopbackGuard ? "Win11 24H2+ Guard Ready" : "Standard Stack";
+            string cong = _lastReport.Parameters.FirstOrDefault(p => p.Id == "tcp.congestion")?.CurrentValue ?? "CUBIC";
+            string tfo = _lastReport.Parameters.FirstOrDefault(p => p.Id == "tcp.fastopen")?.CurrentValue ?? "—";
+            KpiCongestionText.Text = cong;
+            KpiBbrGuardText.Text = os.RequiresBbr2LoopbackGuard
+                ? $"24H2+ Guard Ready • TFO: {tfo}"
+                : $"TFO: {tfo}";
 
-            OverviewSubtitleText.Text = $"64-bit unelevated scan • {_lastReport.Parameters.Count} live parameters inspected • Mandatory JSON snapshot before any change";
+            ParamsCountPillText.Text = $"{_lastReport.Parameters.Count} Live Parameters";
 
+            RefreshStackChips();
             RefreshAdaptersView();
-            ApplyProfileToControls(GetActiveProfileKind());
+            ApplyProfileToControls(_activeProfile);
         }
         catch (Exception ex)
         {
@@ -166,14 +231,53 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void RefreshStackChips()
+    {
+        if (_lastReport is null) return;
+
+        string Val(string id, string fb = "—") =>
+            _lastReport.Parameters.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))?.CurrentValue ?? fb;
+
+        string autoTuning = Val("tcp.autotuning", "Normal");
+        string rss = Val("offload.rss", "Enabled");
+        string rsc = Val("offload.rsc", "Enabled");
+        string tfo = Val("tcp.fastopen", "Enabled");
+        string ecn = Val("tcp.ecn", "Disabled");
+        string ts = Val("tcp.timestamps", "Disabled");
+        string loopback = Val("tcp.loopback_large_mtu", "Enabled");
+        string throttle = Val("reg.network_throttling", "NotSet");
+
+        bool throttleOff = throttle.Equals("0xffffffff", StringComparison.OrdinalIgnoreCase);
+
+        var chips = new List<StackChipRow>
+        {
+            MakeChip("TCP Auto-Tuning", "Receive window scaling", autoTuning, autoTuning.Equals("Normal", StringComparison.OrdinalIgnoreCase)),
+            MakeChip("RSS / RSC Offloads", "Multi-core & coalescing", $"{rss} / {rsc}", rss.Equals("Enabled", StringComparison.OrdinalIgnoreCase)),
+            MakeChip("TCP Fast Open", "0-RTT SYN handshake", tfo, tfo.Equals("Enabled", StringComparison.OrdinalIgnoreCase)),
+            MakeChip("ECN & Timestamps", "Header overhead & signaling", $"{ecn} / {ts}", ts.Equals("Disabled", StringComparison.OrdinalIgnoreCase)),
+            MakeChip("Loopback Large MTU", "Win11 24H2+ BBR2 guard", loopback, true),
+            MakeChip("Multimedia Throttling", "NetworkThrottlingIndex", throttleOff ? "Disabled (Max)" : throttle, throttleOff)
+        };
+
+        StackChipsRepeater.ItemsSource = chips;
+    }
+
+    private static StackChipRow MakeChip(string label, string sub, string value, bool healthy) =>
+        new(
+            Label: label,
+            Subtitle: sub,
+            ValueText: value,
+            DotBrush: healthy ? GreenBrush : AmberBrush,
+            BadgeBg: healthy ? UpBgBrush : AmberBgBrush,
+            BadgeFg: healthy ? GreenBrush : AmberBrush);
+
     private IReadOnlyList<NetworkAdapterInfo> GetVisibleAdapters()
     {
         if (_lastReport is null) return Array.Empty<NetworkAdapterInfo>();
         if (ToggleVirtualAdapters.IsOn) return _lastReport.Adapters;
 
         return _lastReport.Adapters
-            .Where(a => a.MediaKind is AdapterMediaKind.Ethernet or AdapterMediaKind.WiFi)
-            .Where(a => a.IsUp || a.LinkSpeedMbps > 0 || !(a.Ipv4Address?.StartsWith("169.254.", StringComparison.Ordinal) ?? false) || a.Alias.Equals("Ethernet", StringComparison.OrdinalIgnoreCase))
+            .Where(a => !HostDiscoveryService.IsGhostSecondaryAdapter(a))
             .ToList();
     }
 
@@ -198,7 +302,8 @@ public sealed partial class MainWindow : Window
         {
             query = query.Where(a =>
                 a.Alias.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                a.Description.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+                a.Description.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                (a.Ipv4Address?.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
         }
 
         List<AdapterDisplayRow> rows = query.Select(a =>
@@ -210,9 +315,16 @@ public sealed partial class MainWindow : Window
                 _ => "Assets/icons/adapter_other.png"
             };
 
+            var metaParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(a.GatewayAddress)) metaParts.Add($"GW {a.GatewayAddress}");
+            if (a.DnsServers is { Count: > 0 }) metaParts.Add($"DNS {string.Join(", ", a.DnsServers.Take(2))}");
+            if (!string.IsNullOrWhiteSpace(a.MacAddress)) metaParts.Add($"MAC {a.MacAddress}");
+            string meta = metaParts.Count > 0 ? string.Join("  •  ", metaParts) : "No gateway or DNS bound";
+
             return new AdapterDisplayRow(
                 Alias: a.Alias,
                 Description: a.Description,
+                NetworkMeta: meta,
                 SpeedAndMtu: $"{a.LinkSpeedMbps} Mbps  •  MTU {a.Ipv4Mtu}",
                 IpAddress: a.Ipv4Address ?? "Not connected",
                 StatusLabel: a.IsUp ? "UP" : "DOWN",
@@ -236,18 +348,51 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        DriverPropsHeader.Text = $"Selected Adapter Driver Properties ({nic.Alias})";
+        DriverPropsHeader.Text = $"Selected Adapter Driver Properties ({nic.Alias} • {nic.AdvancedProperties.Count} properties)";
         IEnumerable<AdapterAdvancedPropertyInfo> props = nic.AdvancedProperties;
         if (!string.IsNullOrEmpty(_searchQuery))
         {
             props = props.Where(p =>
                 p.DisplayName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                p.RegistryKeyword.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+                p.RegistryKeyword.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                p.DisplayValue.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
         }
 
         DriverPropsRepeater.ItemsSource = props
             .Select(p => new DriverPropRow(p.DisplayName, p.RegistryKeyword, p.DisplayValue))
             .ToList();
+    }
+
+    private void SetActiveProfilePill(ProfileKind kind)
+    {
+        _activeProfile = kind;
+        _syncingControls = true;
+        BtnProfileDefault.IsChecked = kind == ProfileKind.WindowsDefault;
+        BtnProfileCurrent.IsChecked = kind == ProfileKind.Current;
+        BtnProfileOptimal.IsChecked = kind == ProfileKind.RecommendedOptimal;
+        BtnProfileGaming.IsChecked = kind == ProfileKind.GamingLowLatency;
+        BtnProfileCustom.IsChecked = kind == ProfileKind.Custom;
+        _syncingControls = false;
+    }
+
+    private void ProfilePill_Click(object sender, RoutedEventArgs e)
+    {
+        if (_syncingControls || sender is not ToggleButton btn || btn.Tag is not string tag) return;
+
+        ProfileKind kind = tag switch
+        {
+            "default" => ProfileKind.WindowsDefault,
+            "current" => ProfileKind.Current,
+            "gaming" => ProfileKind.GamingLowLatency,
+            "custom" => ProfileKind.Custom,
+            _ => ProfileKind.RecommendedOptimal
+        };
+
+        SetActiveProfilePill(kind);
+        if (_lastReport is not null)
+        {
+            ApplyProfileToControls(kind);
+        }
     }
 
     private void ApplyProfileToControls(ProfileKind kind)
@@ -269,18 +414,25 @@ public sealed partial class MainWindow : Window
         SelectItem(CmbAutoTuning, GetTarget("tcp.autotuning", "Normal"));
         SelectItem(CmbHeuristics, GetTarget("tcp.heuristics", "Disabled"));
         SelectItem(CmbCongestion, GetTarget("tcp.congestion", "CUBIC"));
-        SelectItem(CmbEcn, GetTarget("tcp.ecn", "Default"));
+        SelectItem(CmbEcn, GetTarget("tcp.ecn", "Disabled"));
         SelectItem(CmbRss, GetTarget("offload.rss", "Enabled"));
         SelectItem(CmbRsc, GetTarget("offload.rsc", "Enabled"));
+        SelectItem(CmbFastOpen, GetTarget("tcp.fastopen", "Enabled"));
         SelectItem(CmbTimestamps, GetTarget("tcp.timestamps", "Disabled"));
         SelectItem(CmbTtl, GetTarget("reg.default_ttl", "64"));
+        SelectItem(CmbLoopbackMtu, GetTarget("tcp.loopback_large_mtu", "Enabled"));
 
         SelectItem(CmbThrottling, GetTarget("reg.network_throttling", "0xffffffff"));
         SelectItem(CmbResponsiveness, GetTarget("reg.system_responsiveness", "10"));
+        SelectItem(CmbAfdFastSend, GetTarget("reg.afd_fast_send", "1500"));
+
         SelectItem(CmbMaxSyn, GetTarget("tcp.maxsynretx", "2"));
         SelectItem(CmbNonSack, GetTarget("tcp.nonsackrtt", "Disabled"));
         SelectItem(CmbInitialRto, GetTarget("tcp.initialrto", "2000"));
         SelectItem(CmbMinRto, GetTarget("tcp.minrto", "300"));
+        SelectItem(CmbPacing, GetTarget("tcp.pacing", "Off"));
+        SelectItem(CmbHyStart, GetTarget("tcp.hystart", "Enabled"));
+
         SelectItem(CmbMaxUserPort, GetTarget("reg.max_user_port", "65534"));
         SelectItem(CmbTimedWait, GetTarget("reg.tcp_timed_wait_delay", "30"));
         SelectItem(CmbQosLimit, GetTarget("reg.qos_non_best_effort", "0"));
@@ -288,9 +440,9 @@ public sealed partial class MainWindow : Window
 
         if (nic is not null)
         {
-            SelectItem(CmbAckFreq, GetTarget($"nic.{nic.InterfaceGuid}.tcpackfreq", "2"));
-            SelectItem(CmbNoDelay, GetTarget($"nic.{nic.InterfaceGuid}.tcpnodelay", "0"));
-            SelectItem(CmbDelAckTicks, GetTarget($"nic.{nic.InterfaceGuid}.tcpdelackticks", "2"));
+            SelectItem(CmbAckFreq, GetTarget($"nic.{nic.InterfaceGuid}.tcpackfreq", "NotSet"));
+            SelectItem(CmbNoDelay, GetTarget($"nic.{nic.InterfaceGuid}.tcpnodelay", "NotSet"));
+            SelectItem(CmbDelAckTicks, GetTarget($"nic.{nic.InterfaceGuid}.tcpdelackticks", "NotSet"));
         }
         _syncingControls = false;
 
@@ -311,9 +463,27 @@ public sealed partial class MainWindow : Window
             _ => kind.ToString()
         };
 
-        KpiDriftText.Text = diffCount == 0 ? "Aligned (0)" : $"{diffCount} Changes";
+        if (diffCount == 0)
+        {
+            KpiDriftText.Text = "All Aligned";
+            KpiDriftIcon.Foreground = GreenBrush;
+            KpiDriftIconBox.Background = UpBgBrush;
+            KpiDriftHeader.Foreground = GreenBrush;
+            ApplyChangesButton.Content = "All Settings Aligned";
+            ApplyChangesButton.IsEnabled = false;
+        }
+        else
+        {
+            string word = diffCount == 1 ? "Change" : "Changes";
+            KpiDriftText.Text = $"{diffCount} {word}";
+            KpiDriftIcon.Foreground = AccentBrush;
+            KpiDriftIconBox.Background = AccentBgBrush;
+            KpiDriftHeader.Foreground = AccentBrush;
+            ApplyChangesButton.Content = $"Review & Apply ({diffCount})";
+            ApplyChangesButton.IsEnabled = true;
+        }
+
         KpiProfileLabel.Text = $"Profile: {friendly}";
-        ApplyChangesButton.Content = diffCount == 0 ? "Apply Changes..." : $"Apply {diffCount} Change(s)...";
     }
 
     private static void SelectItem(ComboBox box, string value)
@@ -331,15 +501,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private ProfileKind GetActiveProfileKind()
-    {
-        if (RadDefault.IsChecked == true) return ProfileKind.WindowsDefault;
-        if (RadCurrent.IsChecked == true) return ProfileKind.Current;
-        if (RadGaming.IsChecked == true) return ProfileKind.GamingLowLatency;
-        if (RadCustom.IsChecked == true) return ProfileKind.Custom;
-        return ProfileKind.RecommendedOptimal;
-    }
-
     private NetworkAdapterInfo? GetSelectedAdapter()
     {
         IReadOnlyList<NetworkAdapterInfo> visible = GetVisibleAdapters();
@@ -350,15 +511,9 @@ public sealed partial class MainWindow : Window
         return visible.FirstOrDefault(a => a.IsUp) ?? _lastReport?.Adapters.FirstOrDefault(a => a.IsUp);
     }
 
-    private void ProfileRadio_Checked(object sender, RoutedEventArgs e)
-    {
-        if (_syncingControls || _lastReport is null) return;
-        ApplyProfileToControls(GetActiveProfileKind());
-    }
-
     private void ResetDefaults_Click(object sender, RoutedEventArgs e)
     {
-        RadDefault.IsChecked = true;
+        SetActiveProfilePill(ProfileKind.WindowsDefault);
         ApplyProfileToControls(ProfileKind.WindowsDefault);
     }
 
@@ -369,15 +524,16 @@ public sealed partial class MainWindow : Window
         _customOverrides[key] = val;
         if (key == "tcp.congestion" && _lastReport is not null)
         {
-            _customOverrides["tcp.loopback_large_mtu"] =
-                string.Equals(val, "BBR2", StringComparison.OrdinalIgnoreCase) && _lastReport.OsInfo.RequiresBbr2LoopbackGuard
-                    ? "disable"
-                    : "enable";
+            string loopbackTarget = string.Equals(val, "BBR2", StringComparison.OrdinalIgnoreCase) && _lastReport.OsInfo.RequiresBbr2LoopbackGuard
+                ? "Disabled"
+                : "Enabled";
+            _customOverrides["tcp.loopback_large_mtu"] = loopbackTarget;
+            _syncingControls = true;
+            SelectItem(CmbLoopbackMtu, loopbackTarget);
+            _syncingControls = false;
         }
 
-        _syncingControls = true;
-        RadCustom.IsChecked = true;
-        _syncingControls = false;
+        SetActiveProfilePill(ProfileKind.Custom);
         UpdatePendingSummary(ProfileKind.Custom);
     }
 
@@ -390,16 +546,18 @@ public sealed partial class MainWindow : Window
         string key = suffix.Replace("nic.", $"nic.{nic.InterfaceGuid}.");
         _customOverrides[key] = val;
 
-        _syncingControls = true;
-        RadCustom.IsChecked = true;
-        _syncingControls = false;
+        SetActiveProfilePill(ProfileKind.Custom);
         UpdatePendingSummary(ProfileKind.Custom);
     }
 
-    private void SpeedSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    private void SpeedSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
     {
         if (SpeedLabelText is null) return;
-        SpeedLabelText.Text = e.NewValue >= 1000 ? "1+ Gbps" : $"{(int)e.NewValue} Mbps";
+        int mbps = (int)e.NewValue;
+        int mtu = int.TryParse(MtuBox?.Text, out int parsedMtu) && parsedMtu >= 576 ? parsedMtu : 1500;
+        BdpResult bdp = BdpCalculator.Calculate(mbps, BandwidthUnit.Mbps, 40, mtu);
+        string speedStr = mbps >= 1000 ? $"{mbps / 1000.0:0.#} Gbps" : $"{mbps} Mbps";
+        SpeedLabelText.Text = $"{speedStr}  •  RWIN {bdp.SuggestedRwinBytes / 1024.0:N0} KB @ 40ms (Scale {bdp.RecommendedScaleFactor})";
     }
 
     private void AdapterCombo_Changed(object sender, SelectionChangedEventArgs e)
@@ -412,6 +570,20 @@ public sealed partial class MainWindow : Window
         PppoeCheck.IsChecked = nic.IsPppoe;
         _syncingControls = false;
         RefreshDriverProperties();
+        ApplyProfileToControls(_activeProfile);
+    }
+
+    private void MtuBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_syncingControls) return;
+        NetworkAdapterInfo? nic = GetSelectedAdapter();
+        if (nic is null) return;
+        if (int.TryParse(MtuBox.Text.Trim(), out int mtu) && mtu >= 576 && mtu <= 9000)
+        {
+            _customOverrides[$"nic.{nic.InterfaceGuid}.mtu"] = mtu.ToString();
+            SetActiveProfilePill(ProfileKind.Custom);
+            UpdatePendingSummary(ProfileKind.Custom);
+        }
     }
 
     private void PppoeCheck_Changed(object sender, RoutedEventArgs e)
@@ -429,8 +601,8 @@ public sealed partial class MainWindow : Window
         if (diffs.Count == 0)
         {
             StatusBanner.Severity = InfoBarSeverity.Success;
-            StatusBanner.Title = "No changes needed";
-            StatusBanner.Message = "Current host settings already match your selected configuration.";
+            StatusBanner.Title = "All settings aligned";
+            StatusBanner.Message = "Current host settings already match your selected profile.";
             StatusBanner.IsOpen = true;
             return;
         }
@@ -438,7 +610,8 @@ public sealed partial class MainWindow : Window
         string friendly = KpiProfileLabel.Text.Replace("Profile: ", string.Empty);
         var dialog = new ReviewChangesDialog(friendly, diffs)
         {
-            XamlRoot = Content.XamlRoot
+            XamlRoot = Content.XamlRoot,
+            RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default
         };
 
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
@@ -446,7 +619,7 @@ public sealed partial class MainWindow : Window
             IReadOnlyList<ChangePlanItem> selected = dialog.GetSelectedItems();
             if (selected.Count > 0)
             {
-                await ApplyWithUacAsync(selected, friendly);
+                await ApplyChangesNativeOrElevatedAsync(selected, friendly);
             }
         }
     }
@@ -455,7 +628,7 @@ public sealed partial class MainWindow : Window
     {
         if (_lastReport is null) return;
         IReadOnlyList<ChangePlanItem> diffs = _diffEngine.ComputeDiff(_lastReport, _customOverrides);
-        string profileName = GetActiveProfileKind().ToString();
+        string profileName = _activeProfile.ToString();
         string outDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "FluentNet-Exports");
         Directory.CreateDirectory(outDir);
         string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -467,29 +640,96 @@ public sealed partial class MainWindow : Window
         StatusBanner.IsOpen = true;
     }
 
-    private async Task ApplyWithUacAsync(IReadOnlyList<ChangePlanItem> diffs, string profileName)
+    private async Task ApplyChangesNativeOrElevatedAsync(IReadOnlyList<ChangePlanItem> diffs, string profileName)
     {
         if (_lastReport is null) return;
-        string? cli = ElevationLauncher.ResolveCliPath();
-        if (cli is null)
+
+        var manifest = new SnapshotManifest(
+            $"snap-{DateTime.UtcNow:yyyyMMdd-HHmmss}",
+            DateTimeOffset.UtcNow,
+            _lastReport.OsInfo.BuildNumber.ToString(),
+            profileName,
+            diffs);
+
+        ApplyReport? report;
+
+        // Fast path: if already elevated, apply 100% in-process via native .NET CIM & Registry (zero child process!)
+        if (ElevationLauncher.IsProcessElevated())
         {
-            StatusBanner.Severity = InfoBarSeverity.Warning;
-            StatusBanner.Title = "FluentNet.Cli.exe not found";
-            StatusBanner.Message = "Place FluentNet.Cli.exe beside FluentNet.exe or export .ps1/.reg scripts.";
-            StatusBanner.IsOpen = true;
-            return;
+            string snapPath = await _snapshotManager.SaveSnapshotAsync(manifest);
+            report = await _applyEngine.ApplyPlanAsync(manifest.Items);
+            report = report with { SnapshotPath = snapPath };
+        }
+        else
+        {
+            string? cli = ElevationLauncher.ResolveCliPath();
+            if (cli is null)
+            {
+                StatusBanner.Severity = InfoBarSeverity.Warning;
+                StatusBanner.Title = "Elevated worker not found";
+                StatusBanner.Message = "Place FluentNet.Cli.exe beside FluentNet.exe, run FluentNet as Administrator, or export .ps1/.reg scripts.";
+                StatusBanner.IsOpen = true;
+                return;
+            }
+
+            string tempPlan = Path.Combine(Path.GetTempPath(), $"fluentnet-plan-{Guid.NewGuid():N}.json");
+            string tempResult = Path.Combine(Path.GetTempPath(), $"fluentnet-result-{Guid.NewGuid():N}.json");
+            await File.WriteAllTextAsync(tempPlan, JsonSerializer.Serialize(manifest, FluentNetJsonContext.Default.SnapshotManifest));
+
+            try
+            {
+                int code = await Task.Run(() =>
+                    ElevationLauncher.RunElevatedCli(cli, $"apply --plan \"{tempPlan}\" --result \"{tempResult}\"", hideWindow: true));
+
+                if (File.Exists(tempResult))
+                {
+                    string resJson = await File.ReadAllTextAsync(tempResult);
+                    report = JsonSerializer.Deserialize(resJson, FluentNetJsonContext.Default.ApplyReport);
+                }
+                else
+                {
+                    report = new ApplyReport(code == 0, Array.Empty<ApplyItemResult>());
+                }
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                StatusBanner.Severity = InfoBarSeverity.Informational;
+                StatusBanner.Title = "UAC prompt cancelled";
+                StatusBanner.Message = "No changes were made to your system.";
+                StatusBanner.IsOpen = true;
+                return;
+            }
+            finally
+            {
+                TryDeleteFile(tempPlan);
+                TryDeleteFile(tempResult);
+            }
         }
 
-        var manifest = new SnapshotManifest($"snap-{DateTime.UtcNow:yyyyMMdd-HHmmss}", DateTimeOffset.UtcNow, _lastReport.OsInfo.BuildNumber.ToString(), profileName, diffs);
-        string tempPlan = Path.Combine(Path.GetTempPath(), $"fluentnet-plan-{Guid.NewGuid():N}.json");
-        await File.WriteAllTextAsync(tempPlan, JsonSerializer.Serialize(manifest, FluentNetJsonContext.Default.SnapshotManifest));
-
-        int code = await Task.Run(() => ElevationLauncher.RunElevatedCli(cli, $"apply --plan \"{tempPlan}\""));
         await RunHostScanAsync();
-        StatusBanner.Severity = code == 0 ? InfoBarSeverity.Success : InfoBarSeverity.Error;
-        StatusBanner.Title = code == 0 ? "Changes applied (pre-change snapshot saved)" : $"Apply exited with code {code}";
-        StatusBanner.Message = code == 0 ? "All selected parameters were applied safely." : "One or more settings failed to apply.";
+
+        if (report is not null && report.AllSucceeded)
+        {
+            StatusBanner.Severity = InfoBarSeverity.Success;
+            StatusBanner.Title = $"Applied {diffs.Count} setting(s) natively via .NET";
+            StatusBanner.Message = "Pre-change JSON snapshot saved. Live host state has been re-verified.";
+        }
+        else
+        {
+            List<ApplyItemResult> failed = report?.Results.Where(r => !r.Succeeded).ToList() ?? new List<ApplyItemResult>();
+            string detail = failed.Count > 0
+                ? string.Join(" | ", failed.Take(3).Select(f => $"{f.ParameterId}: {f.Message}"))
+                : "One or more settings could not be applied.";
+            StatusBanner.Severity = InfoBarSeverity.Error;
+            StatusBanner.Title = failed.Count > 0 ? $"{failed.Count} setting(s) failed to apply" : "Apply failed";
+            StatusBanner.Message = detail;
+        }
         StatusBanner.IsOpen = true;
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); } catch { /* ignore cleanup */ }
     }
 
     private void CalculateBdp_Click(object sender, RoutedEventArgs e)
@@ -498,7 +738,8 @@ public sealed partial class MainWindow : Window
             double.TryParse(BdpLatencyBox.Text, out double ms) &&
             int.TryParse(BdpMtuBox.Text, out int mtu))
         {
-            BdpResult r = BdpCalculator.Calculate(bw, BandwidthUnit.Mbps, ms, mtu);
+            BandwidthUnit unit = BdpUnitCombo.SelectedIndex == 1 ? BandwidthUnit.Gbps : BandwidthUnit.Mbps;
+            BdpResult r = BdpCalculator.Calculate(bw, unit, ms, mtu);
             BdpResultText.Text = $"BDP: {r.BdpBytes:N0} B  •  MSS: {r.Mss} B  •  RWIN: {r.SuggestedRwinBytes:N0} B (Scale {r.RecommendedScaleFactor})";
         }
     }
@@ -535,6 +776,8 @@ public sealed partial class MainWindow : Window
         _diagCts?.Cancel();
         _diagCts = new CancellationTokenSource();
         StopDiagButton.IsEnabled = true;
+        DiagSpinner.IsActive = true;
+        DiagSpinner.Visibility = Visibility.Visible;
         try
         {
             string output = await action(_diagCts.Token);
@@ -547,22 +790,77 @@ public sealed partial class MainWindow : Window
         finally
         {
             StopDiagButton.IsEnabled = false;
+            DiagSpinner.IsActive = false;
+            DiagSpinner.Visibility = Visibility.Collapsed;
         }
     }
 
     private void StopDiag_Click(object sender, RoutedEventArgs e) => _diagCts?.Cancel();
     private void ClearDiag_Click(object sender, RoutedEventArgs e) => DiagOutputBox.Text = string.Empty;
-    private void RefreshSnapshots_Click(object sender, RoutedEventArgs e) => SnapshotsList.ItemsSource = _snapshotManager.ListSnapshotFiles().ToList();
+
+    private void CopyDiag_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(DiagOutputBox.Text)) return;
+        var pkg = new DataPackage();
+        pkg.SetText(DiagOutputBox.Text);
+        Clipboard.SetContent(pkg);
+        StatusBanner.Severity = InfoBarSeverity.Success;
+        StatusBanner.Title = "Copied";
+        StatusBanner.Message = "Diagnostic output copied to clipboard.";
+        StatusBanner.IsOpen = true;
+    }
+
+    private async Task RefreshSnapshotsAsync()
+    {
+        IReadOnlyList<SnapshotSummary> summaries = await _snapshotManager.ListSnapshotSummariesAsync();
+        List<SnapshotDisplayRow> rows = summaries.Select(s => new SnapshotDisplayRow(
+            FilePath: s.FilePath,
+            SnapshotId: s.SnapshotId,
+            ProfileName: s.ProfileName,
+            ChangeCountLabel: s.ChangeCount == 1 ? "1 setting" : $"{s.ChangeCount} settings",
+            OsBuildLabel: $"Build {s.OsBuild}",
+            TimestampLocal: s.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"))).ToList();
+
+        SnapshotsList.ItemsSource = rows;
+        SnapshotsEmptyText.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async void RefreshSnapshots_Click(object sender, RoutedEventArgs e) => await RefreshSnapshotsAsync();
+
+    private async void DeleteSnapshot_Click(object sender, RoutedEventArgs e)
+    {
+        if (SnapshotsList.SelectedItem is not SnapshotDisplayRow row) return;
+        _snapshotManager.DeleteSnapshot(row.FilePath);
+        await RefreshSnapshotsAsync();
+    }
 
     private async void RollbackSelected_Click(object sender, RoutedEventArgs e)
     {
-        if (SnapshotsList.SelectedItem is not string snapPath) return;
+        if (SnapshotsList.SelectedItem is not SnapshotDisplayRow row) return;
+
+        if (ElevationLauncher.IsProcessElevated())
+        {
+            SnapshotManifest? snap = await _snapshotManager.LoadSnapshotAsync(row.FilePath);
+            if (snap is null || snap.Items.Count == 0) return;
+            List<ChangePlanItem> revert = snap.Items.Select(i => i with { OldValue = i.NewValue, NewValue = i.OldValue }).ToList();
+            ApplyReport res = await _applyEngine.ApplyPlanAsync(revert);
+            await RunHostScanAsync();
+            StatusBanner.Severity = res.AllSucceeded ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+            StatusBanner.Title = res.AllSucceeded ? "Rollback complete (native .NET)" : "Rollback completed with errors";
+            StatusBanner.Message = res.AllSucceeded
+                ? $"Restored {revert.Count} setting(s) from {row.SnapshotId}."
+                : string.Join(" | ", res.Results.Where(r => !r.Succeeded).Take(3).Select(r => $"{r.ParameterId}: {r.Message}"));
+            StatusBanner.IsOpen = true;
+            return;
+        }
+
         string? cli = ElevationLauncher.ResolveCliPath();
         if (cli is null) return;
-        int code = await Task.Run(() => ElevationLauncher.RunElevatedCli(cli, $"rollback --snapshot \"{snapPath}\""));
+        int code = await Task.Run(() => ElevationLauncher.RunElevatedCli(cli, $"rollback --snapshot \"{row.FilePath}\"", hideWindow: true));
         await RunHostScanAsync();
         StatusBanner.Severity = code == 0 ? InfoBarSeverity.Success : InfoBarSeverity.Error;
         StatusBanner.Title = code == 0 ? "Rollback complete" : $"Rollback exited with code {code}";
+        StatusBanner.Message = code == 0 ? $"Restored settings from {row.SnapshotId}." : "One or more settings failed to roll back.";
         StatusBanner.IsOpen = true;
     }
 
@@ -645,34 +943,32 @@ public sealed partial class MainWindow : Window
             UpdateNavIcon.Foreground = GreenBrush;
             DownloadUpdateButton.Content = string.IsNullOrWhiteSpace(res.AssetDownloadUrl) ? "Open Release" : "Download Update";
 
-            if (!showDialogOnNew && Content?.XamlRoot is null) return;
-            if (showDialogOnNew && Content?.XamlRoot is not null)
+            if (!showDialogOnNew || Content?.XamlRoot is null) return;
+
+            string body = string.IsNullOrWhiteSpace(res.ReleaseNotes)
+                ? $"Installed: v{res.CurrentVersion}\nAvailable: v{res.LatestVersion}\n\nPublished by {AppLinks.DeveloperName} ({AppLinks.OrganizationName})."
+                : $"Installed: v{res.CurrentVersion}  ->  Available: v{res.LatestVersion}\n\n{res.ReleaseNotes}";
+
+            var dlg = new ContentDialog
             {
-                string body = string.IsNullOrWhiteSpace(res.ReleaseNotes)
-                    ? $"Installed: v{res.CurrentVersion}\nAvailable: v{res.LatestVersion}\n\nPublished by {AppLinks.DeveloperName} ({AppLinks.OrganizationName})."
-                    : $"Installed: v{res.CurrentVersion}  ->  Available: v{res.LatestVersion}\n\n{res.ReleaseNotes}";
+                XamlRoot = Content.XamlRoot,
+                RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
+                Title = $"FluentNet v{res.LatestVersion} Available",
+                Content = new TextBlock { Text = body, TextWrapping = TextWrapping.Wrap, MaxWidth = 520 },
+                PrimaryButtonText = string.IsNullOrWhiteSpace(res.AssetDownloadUrl) ? "Open GitHub Release" : "Download & Verify (.zip)",
+                SecondaryButtonText = "View on GitHub",
+                CloseButtonText = "Later",
+                DefaultButton = ContentDialogButton.Primary
+            };
 
-                var dlg = new ContentDialog
-                {
-                    XamlRoot = Content.XamlRoot,
-                    RequestedTheme = (Content as FrameworkElement)?.ActualTheme ?? ElementTheme.Default,
-                    Title = $"FluentNet v{res.LatestVersion} Available",
-                    Content = new TextBlock { Text = body, TextWrapping = TextWrapping.Wrap, MaxWidth = 520 },
-                    PrimaryButtonText = string.IsNullOrWhiteSpace(res.AssetDownloadUrl) ? "Open GitHub Release" : "Download & Verify (.zip)",
-                    SecondaryButtonText = "View on GitHub",
-                    CloseButtonText = "Later",
-                    DefaultButton = ContentDialogButton.Primary
-                };
-
-                ContentDialogResult choice = await dlg.ShowAsync();
-                if (choice == ContentDialogResult.Primary)
-                {
-                    await DownloadOrOpenReleaseAsync(res);
-                }
-                else if (choice == ContentDialogResult.Secondary)
-                {
-                    AppLinks.OpenInBrowser(res.ReleasePageUrl);
-                }
+            ContentDialogResult choice = await dlg.ShowAsync();
+            if (choice == ContentDialogResult.Primary)
+            {
+                await DownloadOrOpenReleaseAsync(res);
+            }
+            else if (choice == ContentDialogResult.Secondary)
+            {
+                AppLinks.OpenInBrowser(res.ReleasePageUrl);
             }
         }
         else if (showDialogOnNew && Content?.XamlRoot is not null)

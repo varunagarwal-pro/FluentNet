@@ -4,16 +4,16 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:FluentNet.App"
     DefaultButton="Primary"
-    PrimaryButtonText="Apply Changes (UAC)"
+    PrimaryButtonText="Apply Changes"
     CloseButtonText="Cancel"
-    CornerRadius="10">
+    CornerRadius="12">
 
     <ContentDialog.Resources>
-        <x:Double x:Key="ContentDialogMaxWidth">960</x:Double>
-        <x:Double x:Key="ContentDialogMinWidth">820</x:Double>
+        <x:Double x:Key="ContentDialogMaxWidth">980</x:Double>
+        <x:Double x:Key="ContentDialogMinWidth">840</x:Double>
     </ContentDialog.Resources>
 
-    <Grid RowSpacing="12" Width="780">
+    <Grid RowSpacing="12" Width="800">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -21,19 +21,21 @@
         </Grid.RowDefinitions>
 
         <!-- Summary & Snapshot Banner -->
-        <Border Grid.Row="0" Background="#111827" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="8" Padding="14,10">
+        <Border Grid.Row="0" Style="{StaticResource HeroCardStyle}" Padding="16,12">
             <Grid ColumnSpacing="12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Spacing="2">
-                    <TextBlock x:Name="SummaryHeadline" Text="Review Proposed Changes" FontSize="14" FontWeight="SemiBold" Foreground="#F8FAFC" />
-                    <TextBlock Text="A timestamped JSON rollback snapshot is saved automatically before applying any setting."
-                               FontSize="11" Foreground="#94A3B8" />
+                <StackPanel Spacing="3">
+                    <TextBlock x:Name="SummaryHeadline" Text="Review Proposed Changes" FontSize="15" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SummarySubtext"
+                               Text="A timestamped JSON rollback snapshot is saved automatically before applying any setting natively via .NET."
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
-                <Border x:Name="RebootBadge" Grid.Column="1" CornerRadius="12" Padding="10,4" VerticalAlignment="Center">
-                    <TextBlock x:Name="RebootBadgeText" FontSize="11" FontWeight="SemiBold" />
+                <Border x:Name="RebootBadge" Grid.Column="1" CornerRadius="999" Padding="12,5" VerticalAlignment="Center">
+                    <TextBlock x:Name="RebootBadgeText" FontSize="11.5" FontWeight="SemiBold" />
                 </Border>
             </Grid>
         </Border>
@@ -43,59 +45,62 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="32" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="115" />
+                <ColumnDefinition Width="120" />
                 <ColumnDefinition Width="20" />
-                <ColumnDefinition Width="125" />
-                <ColumnDefinition Width="90" />
+                <ColumnDefinition Width="130" />
+                <ColumnDefinition Width="95" />
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="1" Text="SETTING &amp; TARGET PATH" FontSize="10" FontWeight="SemiBold" Foreground="#94A3B8" />
-            <TextBlock Grid.Column="2" Text="CURRENT" FontSize="10" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Center" />
-            <TextBlock Grid.Column="4" Text="PROPOSED" FontSize="10" FontWeight="SemiBold" Foreground="#38BDF8" HorizontalAlignment="Center" />
-            <TextBlock Grid.Column="5" Text="DEFAULT" FontSize="10" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="1" Text="SETTING &amp; NATIVE TARGET" FontSize="10.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock Grid.Column="2" Text="CURRENT" FontSize="10.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="4" Text="PROPOSED" FontSize="10.5" FontWeight="SemiBold" Foreground="{ThemeResource FluentAccentBrush}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="5" Text="DEFAULT" FontSize="10.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right" />
         </Grid>
 
         <!-- Scrollable Diff Rows with Right Scrollbar Clearance -->
-        <ScrollViewer Grid.Row="2" MaxHeight="380" VerticalScrollBarVisibility="Auto">
-            <ItemsRepeater x:Name="DiffRepeater" Margin="0,0,18,0">
+        <ScrollViewer Grid.Row="2" MaxHeight="400" VerticalScrollBarVisibility="Auto">
+            <ItemsRepeater x:Name="DiffRepeater" Margin="0,0,20,0">
                 <ItemsRepeater.Layout>
                     <StackLayout Spacing="6" />
                 </ItemsRepeater.Layout>
                 <ItemsRepeater.ItemTemplate>
                     <DataTemplate x:DataType="local:DiffReviewRow">
-                        <Border Background="#162032" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="6" Padding="12,9">
+                        <Border Style="{StaticResource SurfaceCardStyle}" Padding="12,10">
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="32" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="115" />
+                                    <ColumnDefinition Width="120" />
                                     <ColumnDefinition Width="20" />
-                                    <ColumnDefinition Width="125" />
-                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="95" />
                                 </Grid.ColumnDefinitions>
 
                                 <CheckBox Grid.Column="0" IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" Padding="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind DisplayName}" />
 
                                 <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="13" Foreground="#F8FAFC" />
-                                        <Border Visibility="{x:Bind RebootVisibility}" Background="#3F2A14" CornerRadius="4" Padding="5,1" VerticalAlignment="Center">
-                                            <TextBlock Text="Reboot" FontSize="9" FontWeight="SemiBold" Foreground="#FBBF24" />
+                                        <TextBlock Text="{x:Bind DisplayName}" FontWeight="SemiBold" FontSize="13" />
+                                        <Border Visibility="{x:Bind RebootVisibility}" Background="{ThemeResource FluentWarningSoftBrush}" CornerRadius="999" Padding="7,1" VerticalAlignment="Center">
+                                            <TextBlock Text="Reboot" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource FluentWarningBrush}" />
+                                        </Border>
+                                        <Border Background="{ThemeResource FluentPillBgBrush}" CornerRadius="999" Padding="7,1" VerticalAlignment="Center">
+                                            <TextBlock Text="{x:Bind SourceLabel}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Border>
                                     </StackPanel>
-                                    <TextBlock Text="{x:Bind ExactPath}" FontFamily="Cascadia Code, Consolas" FontSize="10" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    <TextBlock Text="{x:Bind ExactPath}" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
 
-                                <Border Grid.Column="2" Background="#1E293B" CornerRadius="5" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
-                                    <TextBlock Text="{x:Bind OldValue}" FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#CBD5E1" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                <Border Grid.Column="2" Background="{ThemeResource FluentPillBgBrush}" CornerRadius="6" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                                    <TextBlock Text="{x:Bind OldValue}" FontFamily="{StaticResource MonoFont}" FontSize="12" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                 </Border>
 
-                                <FontIcon Grid.Column="3" Glyph="&#xE72A;" FontSize="11" Foreground="#38BDF8" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                <FontIcon Grid.Column="3" Glyph="&#xE72A;" FontSize="11" Foreground="{ThemeResource FluentAccentBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" />
 
-                                <Border Grid.Column="4" Background="#0C4A6E" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="5" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
-                                    <TextBlock Text="{x:Bind NewValue}" FontFamily="Cascadia Code, Consolas" FontSize="12" FontWeight="SemiBold" Foreground="#7DD3FC" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                <Border Grid.Column="4" Background="{ThemeResource FluentAccentSoftBrush}" BorderBrush="{ThemeResource FluentAccentBrush}" BorderThickness="1" CornerRadius="6" Padding="8,4" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                                    <TextBlock Text="{x:Bind NewValue}" FontFamily="{StaticResource MonoFont}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource FluentAccentBrush}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                 </Border>
 
-                                <TextBlock Grid.Column="5" Text="{x:Bind DefaultValue}" FontFamily="Cascadia Code, Consolas" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="5" Text="{x:Bind DefaultValue}" FontFamily="{StaticResource MonoFont}" FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
                             </Grid>
                         </Border>
                     </DataTemplate>

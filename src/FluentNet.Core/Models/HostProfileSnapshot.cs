@@ -23,7 +23,8 @@ public sealed record AdapterAdvancedPropertyInfo(
     string RegistryKeyword,
     string DisplayName,
     string DisplayValue,
-    string RegistryValue);
+    string RegistryValue,
+    IReadOnlyList<string>? ValidDisplayValues = null);
 
 public sealed record NetworkAdapterInfo(
     string Alias,
@@ -37,7 +38,10 @@ public sealed record NetworkAdapterInfo(
     bool IsPppoe,
     string? Ipv4Address,
     string? Ipv6Address,
-    IReadOnlyList<AdapterAdvancedPropertyInfo> AdvancedProperties);
+    IReadOnlyList<AdapterAdvancedPropertyInfo> AdvancedProperties,
+    string? MacAddress = null,
+    string? GatewayAddress = null,
+    IReadOnlyList<string>? DnsServers = null);
 
 public sealed record HostScanReport(
     DateTimeOffset ScannedAtUtc,

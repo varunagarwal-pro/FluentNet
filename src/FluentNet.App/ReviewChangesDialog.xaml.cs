@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using FluentNet.Core.Models;
+using FluentNet.Core.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -22,6 +23,14 @@ public sealed class DiffReviewRow : INotifyPropertyChanged
     public string NewValue => Item.NewValue;
     public string DefaultValue => Item.WindowsDefaultValue;
     public string ExactPath => Item.ExactPath;
+    public string SourceLabel => Item.SourceKind switch
+    {
+        ParameterSourceKind.Registry => "HKLM 64-bit",
+        ParameterSourceKind.Cim => "Native CIM",
+        ParameterSourceKind.DriverAdvancedProperty => "NIC Driver",
+        ParameterSourceKind.Netsh => "Netsh IOCTL",
+        _ => Item.SourceKind.ToString()
+    };
     public Visibility RebootVisibility => Item.RequiresReboot ? Visibility.Visible : Visibility.Collapsed;
 
     public bool IsSelected
@@ -48,14 +57,19 @@ public sealed partial class ReviewChangesDialog : ContentDialog
     {
         InitializeComponent();
         Title = $"Review Proposed Changes — {profileName}";
+        PrimaryButtonText = ElevationLauncher.IsProcessElevated()
+            ? "Apply Directly (.NET)"
+            : "Apply Changes (UAC)";
+
         _rows = items.Select(i => new DiffReviewRow(i)).ToList();
         DiffRepeater.ItemsSource = _rows;
 
         bool needsReboot = items.Any(i => i.RequiresReboot);
-        SummaryHeadline.Text = $"{items.Count} setting(s) queued for {profileName}";
-        RebootBadge.Background = new SolidColorBrush(needsReboot ? Color.FromArgb(60, 245, 158, 11) : Color.FromArgb(45, 16, 185, 129));
-        RebootBadgeText.Foreground = new SolidColorBrush(needsReboot ? Color.FromArgb(255, 251, 191, 36) : Color.FromArgb(255, 52, 211, 153));
-        RebootBadgeText.Text = needsReboot ? "Reboot Required" : "Instant Apply";
+        string plural = items.Count == 1 ? "setting" : "settings";
+        SummaryHeadline.Text = $"{items.Count} {plural} queued for {profileName}";
+        RebootBadge.Background = new SolidColorBrush(needsReboot ? Color.FromArgb(40, 245, 158, 11) : Color.FromArgb(35, 16, 185, 129));
+        RebootBadgeText.Foreground = new SolidColorBrush(needsReboot ? Color.FromArgb(255, 245, 158, 11) : Color.FromArgb(255, 16, 185, 129));
+        RebootBadgeText.Text = needsReboot ? "Reboot Recommended" : "Instant Apply";
     }
 
     public IReadOnlyList<ChangePlanItem> GetSelectedItems()
