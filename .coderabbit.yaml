@@ -1,0 +1,31 @@
+language: en-US
+early_access: false
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "dev"
+  path_instructions:
+    - path: "**/*.cs"
+      instructions: |
+        Enforce strict 64-bit targeting (x64/arm64; reject AnyCPU/x86).
+        Verify all network probes, CIM/WMI queries, and registry reads run asynchronously off the UI thread with CancellationToken support.
+        Reject runtime powershell.exe spawns for NetTCPIP/NetAdapter settings (must use CIM ROOT\StandardCimv2, iphlpapi.dll, or Registry64; PowerShell syntax is only for exported .ps1 scripts).
+        Ensure FluentNet.Core remains NativeAOT-safe (System.Text.Json source-gen, no runtime reflection) and compatible with linked compilation in FluentNet.Classic (net48).
+        Verify mandatory pre-change JSON snapshot before any system mutation and OS-build safety guards (e.g., Win11 24H2+ BBR2 loopbacklargemtu=disable).
+    - path: "**/*.xaml"
+      instructions: |
+        Verify accessibility (AutomationProperties.Name on icon-only controls, TabIndex/keyboard navigation, WCAG 2.1 AA contrast) and 4px spacing scale.
+    - path: "**/*.manifest"
+      instructions: |
+        UI applications (FluentNet.App and FluentNet.Classic) must remain level="asInvoker"; only FluentNet.Cli handles on-demand elevation.
+chat:
+  auto_reply: true

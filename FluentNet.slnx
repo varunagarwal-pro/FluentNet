@@ -1,0 +1,16 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="ARM64" />
+  </Configurations>
+  <Project Path="src/FluentNet.Core/FluentNet.Core.csproj" />
+  <Project Path="src/FluentNet.Cli/FluentNet.Cli.csproj" />
+  <Project Path="src/FluentNet.Tests/FluentNet.Tests.csproj" />
+  <Project Path="src/FluentNet.App/FluentNet.App.csproj">
+    <Platform Project="x64" />
+    <Platform Project="ARM64" />
+  </Project>
+  <Project Path="src/FluentNet.Classic/FluentNet.Classic.csproj">
+    <Platform Project="x64" />
+  </Project>
+</Solution>

@@ -1,0 +1,26 @@
+name: Feature Request
+description: Propose a new Windows networking parameter, diagnostic probe, or UI improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem & Proposal
+      description: Explain what you want to add and why it benefits Windows 10/11 networking.
+    validations:
+      required: true
+  - type: textarea
+    id: docs-reference
+    attributes:
+      label: Official Documentation Reference
+      description: Link to Microsoft Learn (NetTCPIP, NetAdapter, Registry, or RFC) documenting this setting.
+    validations:
+      required: true
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Safety & Architecture Check
+      options:
+        - label: Works on 64-bit Windows 10 (19041+) / Windows 11 without undocumented snake-oil tweaks
+        - label: Supports pre-change snapshot and 1-click rollback
