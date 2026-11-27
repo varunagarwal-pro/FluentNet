@@ -1,0 +1,87 @@
+<Application
+    x:Class="FluentNet.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary Source="Styles/Shell.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="FluentSurfaceBrush" Color="#0EFFFFFF" />
+                    <SolidColorBrush x:Key="FluentSurfaceElevatedBrush" Color="#15FFFFFF" />
+                    <SolidColorBrush x:Key="FluentSurfaceSubtleBrush" Color="#08FFFFFF" />
+                    <SolidColorBrush x:Key="FluentBorderBrush" Color="#18FFFFFF" />
+                    <SolidColorBrush x:Key="FluentBorderStrongBrush" Color="#2AFFFFFF" />
+                    <SolidColorBrush x:Key="FluentAccentBrush" Color="#38BDF8" />
+                    <SolidColorBrush x:Key="FluentAccentSoftBrush" Color="#1E38BDF8" />
+                    <SolidColorBrush x:Key="FluentAccentBorderBrush" Color="#4838BDF8" />
+                    <SolidColorBrush x:Key="FluentSuccessBrush" Color="#34D399" />
+                    <SolidColorBrush x:Key="FluentSuccessSoftBrush" Color="#1E10B981" />
+                    <SolidColorBrush x:Key="FluentSuccessBorderBrush" Color="#4410B981" />
+                    <SolidColorBrush x:Key="FluentWarningBrush" Color="#FBBF24" />
+                    <SolidColorBrush x:Key="FluentWarningSoftBrush" Color="#22F59E0B" />
+                    <SolidColorBrush x:Key="FluentWarningBorderBrush" Color="#48F59E0B" />
+                    <SolidColorBrush x:Key="FluentDangerBrush" Color="#F87171" />
+                    <SolidColorBrush x:Key="FluentDangerSoftBrush" Color="#22EF4444" />
+                    <SolidColorBrush x:Key="FluentPurpleBrush" Color="#A78BFA" />
+                    <SolidColorBrush x:Key="FluentPurpleSoftBrush" Color="#1EA78BFA" />
+                    <SolidColorBrush x:Key="FluentTerminalBgBrush" Color="#CC0B0F17" />
+                    <SolidColorBrush x:Key="FluentTerminalFgBrush" Color="#E2E8F0" />
+                    <SolidColorBrush x:Key="FluentTagBgBrush" Color="#14FFFFFF" />
+                    <SolidColorBrush x:Key="FluentSegmentedTrackBrush" Color="#12FFFFFF" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="FluentSurfaceBrush" Color="#0EFFFFFF" />
+                    <SolidColorBrush x:Key="FluentSurfaceElevatedBrush" Color="#15FFFFFF" />
+                    <SolidColorBrush x:Key="FluentSurfaceSubtleBrush" Color="#08FFFFFF" />
+                    <SolidColorBrush x:Key="FluentBorderBrush" Color="#18FFFFFF" />
+                    <SolidColorBrush x:Key="FluentBorderStrongBrush" Color="#2AFFFFFF" />
+                    <SolidColorBrush x:Key="FluentAccentBrush" Color="#38BDF8" />
+                    <SolidColorBrush x:Key="FluentAccentSoftBrush" Color="#1E38BDF8" />
+                    <SolidColorBrush x:Key="FluentAccentBorderBrush" Color="#4838BDF8" />
+                    <SolidColorBrush x:Key="FluentSuccessBrush" Color="#34D399" />
+                    <SolidColorBrush x:Key="FluentSuccessSoftBrush" Color="#1E10B981" />
+                    <SolidColorBrush x:Key="FluentSuccessBorderBrush" Color="#4410B981" />
+                    <SolidColorBrush x:Key="FluentWarningBrush" Color="#FBBF24" />
+                    <SolidColorBrush x:Key="FluentWarningSoftBrush" Color="#22F59E0B" />
+                    <SolidColorBrush x:Key="FluentWarningBorderBrush" Color="#48F59E0B" />
+                    <SolidColorBrush x:Key="FluentDangerBrush" Color="#F87171" />
+                    <SolidColorBrush x:Key="FluentDangerSoftBrush" Color="#22EF4444" />
+                    <SolidColorBrush x:Key="FluentPurpleBrush" Color="#A78BFA" />
+                    <SolidColorBrush x:Key="FluentPurpleSoftBrush" Color="#1EA78BFA" />
+                    <SolidColorBrush x:Key="FluentTerminalBgBrush" Color="#CC0B0F17" />
+                    <SolidColorBrush x:Key="FluentTerminalFgBrush" Color="#E2E8F0" />
+                    <SolidColorBrush x:Key="FluentTagBgBrush" Color="#14FFFFFF" />
+                    <SolidColorBrush x:Key="FluentSegmentedTrackBrush" Color="#12FFFFFF" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="FluentSurfaceBrush" Color="#D8FFFFFF" />
+                    <SolidColorBrush x:Key="FluentSurfaceElevatedBrush" Color="#F5FFFFFF" />
+                    <SolidColorBrush x:Key="FluentSurfaceSubtleBrush" Color="#88FFFFFF" />
+                    <SolidColorBrush x:Key="FluentBorderBrush" Color="#16000000" />
+                    <SolidColorBrush x:Key="FluentBorderStrongBrush" Color="#26000000" />
+                    <SolidColorBrush x:Key="FluentAccentBrush" Color="#0284C7" />
+                    <SolidColorBrush x:Key="FluentAccentSoftBrush" Color="#160284C7" />
+                    <SolidColorBrush x:Key="FluentAccentBorderBrush" Color="#400284C7" />
+                    <SolidColorBrush x:Key="FluentSuccessBrush" Color="#059669" />
+                    <SolidColorBrush x:Key="FluentSuccessSoftBrush" Color="#16059669" />
+                    <SolidColorBrush x:Key="FluentSuccessBorderBrush" Color="#40059669" />
+                    <SolidColorBrush x:Key="FluentWarningBrush" Color="#D97706" />
+                    <SolidColorBrush x:Key="FluentWarningSoftBrush" Color="#1AD97706" />
+                    <SolidColorBrush x:Key="FluentWarningBorderBrush" Color="#40D97706" />
+                    <SolidColorBrush x:Key="FluentDangerBrush" Color="#DC2626" />
+                    <SolidColorBrush x:Key="FluentDangerSoftBrush" Color="#18DC2626" />
+                    <SolidColorBrush x:Key="FluentPurpleBrush" Color="#7C3AED" />
+                    <SolidColorBrush x:Key="FluentPurpleSoftBrush" Color="#167C3AED" />
+                    <SolidColorBrush x:Key="FluentTerminalBgBrush" Color="#F5F8FAFC" />
+                    <SolidColorBrush x:Key="FluentTerminalFgBrush" Color="#0F172A" />
+                    <SolidColorBrush x:Key="FluentTagBgBrush" Color="#0D000000" />
+                    <SolidColorBrush x:Key="FluentSegmentedTrackBrush" Color="#0C000000" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

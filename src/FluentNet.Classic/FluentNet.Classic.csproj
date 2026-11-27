@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <Platforms>x64</Platforms>
+    <AssemblyName>FluentNet.Classic</AssemblyName>
+    <RootNamespace>FluentNet.Classic</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Management" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\icons\*.png" Link="Assets\icons\%(Filename)%(Extension)" />
+    <Resource Include="..\..\assets\fluentnet-icon.png" Link="Assets\fluentnet-icon.png" />
+  </ItemGroup>
+
+  <!-- Linked Core source files: zero-NuGet, single-EXE portable compatibility on .NET 4.8 -->
+  <ItemGroup>
+    <Compile Include="..\FluentNet.Core\Models\*.cs" Link="Core\Models\%(Filename)%(Extension)" />
+    <Compile Include="..\FluentNet.Core\Services\*.cs" Link="Core\Services\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

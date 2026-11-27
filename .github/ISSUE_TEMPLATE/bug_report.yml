@@ -1,0 +1,44 @@
+name: Bug Report
+description: Report a bug, regression, or OS-compatibility issue in FluentNet
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: dropdown
+    id: edition
+    attributes:
+      label: FluentNet Edition
+      options:
+        - FluentNet.App (WinUI 3 / .NET 10)
+        - FluentNet.Classic (WPF / .NET 4.8 Portable)
+        - FluentNet.Cli
+    validations:
+      required: true
+  - type: input
+    id: os-build
+    attributes:
+      label: Windows Version & Build
+      placeholder: "e.g. Windows 11 24H2 (Build 26100), x64"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the issue, affected NIC/setting, and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Launch FluentNet...
+        2. Select adapter...
+        3. Click...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Diff Preview / Snapshot / Error Output
+      render: text

@@ -1,11 +1,11 @@
 Be 100% honest and transparent. Read the referenced files completely. Keep summaries concise, precise, and code-focused with zero filler.
 
-Target Project: D:\SentinelLabs\TCP-Optimizer\ (Strict Boundary: All edits, code, and temp/staging files belong strictly inside this folder. Never touch or pollute D:\SentinelLabs\ root).
+Target Project: D:\SentinelLabs\FluentNet\ (Strict Boundary: All edits, code, and temp/staging files belong strictly inside this folder. Never touch or pollute D:\SentinelLabs\ root).
 
 MANDATORY FIRST ACTIONS:
 1. Read Root Directive: #file:'D:\SentinelLabs\.agents\AGENTS.md'
-2. Read Project Guide: #file:'D:\SentinelLabs\TCP-Optimizer\varun.txt'
-3. Read Project Documentation (once created): 'D:\SentinelLabs\TCP-Optimizer\README.md'
+2. Read Project Guide: #file:'D:\SentinelLabs\FluentNet\varun.txt'
+3. Read Project Documentation (once created): 'D:\SentinelLabs\FluentNet\README.md'
 4. Load Centralized Skills on Demand: Look up and read matching skills under 'D:\SentinelLabs\.agents\skills\' per AGENTS.md Rule 6 before authoring code.
 
 Project Purpose:
@@ -20,6 +20,9 @@ Guidelines:
   - Transparent Diff Preview: Always display Current vs. Proposed values (and exact underlying registry path, `netsh`, or PowerShell cmdlet) before applying changes.
   - Zero Bloat, Zero Telemetry, Zero Snake-Oil: Never introduce telemetry, adware, scareware, or unverifiable "magic" registry tweaks. Every parameter must map to a documented Windows networking setting and be OS-version/interface-aware.
   - Exportable & Auditable: Support generating inspectable apply/revert scripts (e.g., PowerShell / `.reg`) in addition to direct elevation-aware application.
+- Mandatory Unified SemVer Auto-Bump & Local Publish (see `docs/VERSIONING.md`):
+  - Single source of truth is `D:\SentinelLabs\FluentNet\version.txt` (`MAJOR.MINOR.PATCH`), propagated via `src/Directory.Build.props`.
+  - After ANY code or packaging change, agents MUST automatically run `tools/Bump-Version.ps1 -Part <patch|minor|major>` (default `patch`) and publish updated binaries to `D:\Program\FluentNet` via `tools/Publish-Local.ps1` without waiting to be prompted.
 - Temp Artifact Planning Mandate: Never dump monolithic plans or multi-page logs in chat. Write comprehensive plans to 'D:\SentinelLabs\TCP-Optimizer\temp\<task_name>_plan.md' and provide a concise summary with clickable file link in chat.
 - Approval Gate: Announce natural language WHAT/WHY and wait for explicit user approval (GO / Proceed / Approved) before modifying files or executing commands.
 - Anti-Scope-Creep: Complete the current approved task 100% before proposing or adding further improvements.
