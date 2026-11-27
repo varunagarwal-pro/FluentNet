@@ -1,11 +1,26 @@
 using System.Diagnostics;
 using System.IO;
+using System.Security.Principal;
 
 namespace FluentNet.Core.Services;
 
 public static class ElevationLauncher
 {
-    public static int RunElevatedCli(string cliExecutablePath, string arguments)
+    public static bool IsProcessElevated()
+    {
+        try
+        {
+            using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static int RunElevatedCli(string cliExecutablePath, string arguments, bool hideWindow = true)
     {
         if (!File.Exists(cliExecutablePath))
         {
@@ -17,7 +32,8 @@ public static class ElevationLauncher
             FileName = cliExecutablePath,
             Arguments = arguments,
             UseShellExecute = true,
-            Verb = "runas"
+            Verb = "runas",
+            WindowStyle = hideWindow ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
         };
 
         using Process? proc = Process.Start(psi);

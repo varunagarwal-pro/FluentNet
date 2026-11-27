@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using FluentNet.Core.Models;
 using FluentNet.Core.Serialization;
@@ -9,15 +10,18 @@ internal static class Program
 {
     public static async Task<int> Main(string[] args)
     {
+        string version = UpdateService.GetInstalledVersion(Assembly.GetExecutingAssembly());
+
         if (args.Length == 0 || args[0] is "--help" or "-h")
         {
-            Console.WriteLine("FluentNet CLI — 64-bit Windows TCP/IP & NIC Optimization Worker");
+            Console.WriteLine($"FluentNet CLI v{version} — 64-bit Native .NET Network Stack Worker");
             Console.WriteLine("Commands:");
+            Console.WriteLine("  version");
             Console.WriteLine("  inspect");
             Console.WriteLine("  diag --host <host>");
             Console.WriteLine("  export --profile <Optimal|Gaming|Default> --out <dir>");
-            Console.WriteLine("  apply --plan <plan.json>");
-            Console.WriteLine("  rollback --snapshot <snapshot.json>");
+            Console.WriteLine("  apply --plan <plan.json> [--result <report.json>]");
+            Console.WriteLine("  rollback --snapshot <snapshot.json> [--result <report.json>]");
             return 0;
         }
 
@@ -25,7 +29,7 @@ internal static class Program
         switch (cmd)
         {
             case "version":
-                Console.WriteLine("FluentNet.Cli 0.1.0 (64-bit)");
+                Console.WriteLine($"FluentNet.Cli {version} (64-bit)");
                 return 0;
 
             case "inspect":
@@ -91,6 +95,7 @@ internal static class Program
             case "apply":
             {
                 string? planPath = GetArg(args, "--plan");
+                string? resultPath = GetArg(args, "--result");
                 if (string.IsNullOrWhiteSpace(planPath) || !File.Exists(planPath))
                 {
                     Console.Error.WriteLine("Missing or invalid --plan <file>.");
@@ -102,6 +107,7 @@ internal static class Program
                 if (plan is null || plan.Items.Count == 0)
                 {
                     Console.WriteLine("No changes to apply.");
+                    await WriteResultReportAsync(resultPath, new ApplyReport(true, Array.Empty<ApplyItemResult>())).ConfigureAwait(false);
                     return 0;
                 }
 
@@ -112,17 +118,21 @@ internal static class Program
 
                 var applier = new ApplyEngine();
                 ApplyReport result = await applier.ApplyPlanAsync(plan.Items).ConfigureAwait(false);
+                result = result with { SnapshotPath = savedSnap };
+
                 foreach (ApplyItemResult r in result.Results)
                 {
                     Console.WriteLine($"[{(r.Succeeded ? "OK" : "FAIL")}] {r.ParameterId}: {r.Message}");
                 }
 
+                await WriteResultReportAsync(resultPath, result).ConfigureAwait(false);
                 return result.AllSucceeded ? 0 : 1;
             }
 
             case "rollback":
             {
                 string? snapPath = GetArg(args, "--snapshot");
+                string? resultPath = GetArg(args, "--result");
                 if (string.IsNullOrWhiteSpace(snapPath) || !File.Exists(snapPath))
                 {
                     Console.Error.WriteLine("Missing or invalid --snapshot <file>.");
@@ -140,11 +150,14 @@ internal static class Program
                 var revertItems = snap.Items.Select(i => i with { OldValue = i.NewValue, NewValue = i.OldValue }).ToList();
                 var applier = new ApplyEngine();
                 ApplyReport result = await applier.ApplyPlanAsync(revertItems).ConfigureAwait(false);
+                result = result with { SnapshotPath = snapPath };
+
                 foreach (ApplyItemResult r in result.Results)
                 {
                     Console.WriteLine($"[{(r.Succeeded ? "REVERTED" : "FAIL")}] {r.ParameterId}: {r.Message}");
                 }
 
+                await WriteResultReportAsync(resultPath, result).ConfigureAwait(false);
                 return result.AllSucceeded ? 0 : 1;
             }
 
@@ -152,6 +165,15 @@ internal static class Program
                 Console.Error.WriteLine($"Unknown command '{args[0]}'. Run --help.");
                 return 1;
         }
+    }
+
+    private static async Task WriteResultReportAsync(string? resultPath, ApplyReport report)
+    {
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+        string? dir = Path.GetDirectoryName(resultPath);
+        if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
+        string payload = JsonSerializer.Serialize(report, FluentNetJsonContext.Default.ApplyReport);
+        await File.WriteAllTextAsync(resultPath, payload).ConfigureAwait(false);
     }
 
     private static string? GetArg(string[] args, string flag)

@@ -4,43 +4,69 @@
 
     <FontFamily x:Key="MonoFont">Cascadia Code, Consolas, Courier New</FontFamily>
 
+    <!-- Adaptive Fluent Cards -->
     <Style x:Key="SurfaceCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="Background" Value="{ThemeResource FluentSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="10" />
     </Style>
 
-    <Style x:Key="DarkSlateCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="#111827" />
-        <Setter Property="BorderBrush" Value="#1E293B" />
+    <Style x:Key="HeroCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource FluentSurfaceElevatedBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="12" />
     </Style>
 
     <Style x:Key="SubtleCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="#162032" />
-        <Setter Property="BorderBrush" Value="#1E293B" />
+        <Setter Property="Background" Value="{ThemeResource FluentSurfaceSubtleBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="CornerRadius" Value="8" />
     </Style>
 
-    <Style x:Key="ElectricAccentButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="#0284C7" />
-        <Setter Property="Foreground" Value="#FFFFFF" />
-        <Setter Property="BorderBrush" Value="#38BDF8" />
+    <Style x:Key="TerminalCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource FluentTerminalBgBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="6" />
-        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="CornerRadius" Value="10" />
+    </Style>
+
+    <!-- Modern Pill Badges -->
+    <Style x:Key="PillBadgeStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource FluentPillBgBrush}" />
+        <Setter Property="CornerRadius" Value="999" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Primary & Subtle Action Buttons -->
+    <Style x:Key="PrimaryActionButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+        <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16,8" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
-    <Style x:Key="DarkSecondaryButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="#1E293B" />
-        <Setter Property="Foreground" Value="#F1F5F9" />
-        <Setter Property="BorderBrush" Value="#334155" />
+    <Style x:Key="SubtleActionButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource FluentSurfaceElevatedBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource FluentBorderStrongBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="6" />
-        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="13,7" />
+    </Style>
+
+    <!-- Segmented Profile Pill ToggleButton -->
+    <Style x:Key="ProfilePillToggleStyle" TargetType="ToggleButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="13,6" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 </ResourceDictionary>

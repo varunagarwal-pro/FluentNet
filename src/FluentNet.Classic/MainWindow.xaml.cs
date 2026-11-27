@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly HostScanner _scanner = new();
     private readonly ProfileEngine _profileEngine = new();
     private readonly DiffEngine _diffEngine = new();
+    private readonly ApplyEngine _applyEngine = new();
     private readonly SnapshotManager _snapshotManager = new();
     private readonly IcmpDiagnosticsService _icmp = new();
     private readonly UpdateService _updater = new();
@@ -31,7 +32,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         _appVersion = UpdateService.GetInstalledVersion(typeof(MainWindow).Assembly);
         ClassicVersionText.Text = $"v{_appVersion} • MIT Open Source";
-        Title = $"FluentNet Classic (x64 Portable) v{_appVersion} — by {AppLinks.DeveloperName}";
+        string mode = ElevationLauncher.IsProcessElevated() ? "Administrator" : "Standard";
+        Title = $"FluentNet Classic (x64 Portable • {mode}) v{_appVersion} — by {AppLinks.DeveloperName}";
         Loaded += async (_, _) => await RunScanAsync();
     }
 
@@ -48,14 +50,18 @@ public partial class MainWindow : Window
 
     private async Task RunScanAsync()
     {
-        StatusText.Text = "Scanning host (OS, CPU, NICs, CIM/WMI, 64-bit Registry)...";
+        StatusText.Text = "Scanning host (OS, true CPU cores, NICs, native CIM/WMI, 64-bit Registry)...";
         try
         {
             _lastReport = await _scanner.ScanAsync();
             OsEnvironmentInfo os = _lastReport.OsInfo;
-            HostSummaryText.Text = $"{os.ProductName} {os.DisplayVersion} (Build {os.BuildNumber})  •  {os.PhysicalCoreCount} Cores / {os.LogicalProcessorCount} Logical  •  BBR2: {(os.SupportsBbr2 ? "Supported" : "No")}";
+            HostSummaryText.Text = $"{os.ProductName} {os.DisplayVersion} (Build {os.BuildNumber})  •  {os.PhysicalCoreCount}C / {os.LogicalProcessorCount}T  •  BBR2: {(os.SupportsBbr2 ? "Supported" : "No")}";
 
-            AdaptersGrid.ItemsSource = _lastReport.Adapters.Select(a => new
+            List<NetworkAdapterInfo> visible = _lastReport.Adapters
+                .Where(a => !HostDiscoveryService.IsGhostSecondaryAdapter(a))
+                .ToList();
+
+            AdaptersGrid.ItemsSource = visible.Select(a => new
             {
                 a.Alias,
                 a.MediaKind,
@@ -66,18 +72,20 @@ public partial class MainWindow : Window
                 a.Description
             }).ToList();
 
-            AdapterCombo.ItemsSource = _lastReport.Adapters.Select(a => $"{a.Alias} ({a.LinkSpeedMbps} Mbps)").ToList();
-            if (_lastReport.Adapters.Count > 0 && AdapterCombo.SelectedIndex < 0)
+            AdapterCombo.ItemsSource = visible.Select(a => $"{a.Alias} ({a.LinkSpeedMbps} Mbps)").ToList();
+            if (visible.Count > 0 && (AdapterCombo.SelectedIndex < 0 || AdapterCombo.SelectedIndex >= visible.Count))
             {
                 _syncing = true;
                 AdapterCombo.SelectedIndex = 0;
-                MtuBox.Text = _lastReport.Adapters[0].Ipv4Mtu.ToString();
-                PppoeCheck.IsChecked = _lastReport.Adapters[0].IsPppoe;
+                MtuBox.Text = visible[0].Ipv4Mtu.ToString();
+                PppoeCheck.IsChecked = visible[0].IsPppoe;
                 _syncing = false;
             }
 
             ApplyProfileToControls(GetActiveProfile());
-            StatusText.Text = $"Ready: {_lastReport.Adapters.Count} adapter(s), {_lastReport.Parameters.Count} live parameters (unelevated).";
+            int pending = _diffEngine.ComputeDiff(_lastReport, _customOverrides).Count;
+            string alignText = pending == 0 ? "All settings aligned" : $"{pending} pending {(pending == 1 ? "change" : "changes")}";
+            StatusText.Text = $"Ready: {visible.Count} adapter(s), {_lastReport.Parameters.Count} live parameters • {alignText}.";
         }
         catch (Exception ex)
         {
@@ -103,7 +111,7 @@ public partial class MainWindow : Window
         SelectCombo(CmbAutoTuning, Get("tcp.autotuning", "Normal"));
         SelectCombo(CmbHeuristics, Get("tcp.heuristics", "Disabled"));
         SelectCombo(CmbCongestion, Get("tcp.congestion", "CUBIC"));
-        SelectCombo(CmbEcn, Get("tcp.ecn", "Default"));
+        SelectCombo(CmbEcn, Get("tcp.ecn", "Disabled"));
         SelectCombo(CmbRss, Get("offload.rss", "Enabled"));
         SelectCombo(CmbRsc, Get("offload.rsc", "Enabled"));
         SelectCombo(CmbTimestamps, Get("tcp.timestamps", "Disabled"));
@@ -138,9 +146,13 @@ public partial class MainWindow : Window
 
     private NetworkAdapterInfo? GetSelectedAdapter()
     {
-        if (_lastReport is null || AdapterCombo.SelectedIndex < 0 || AdapterCombo.SelectedIndex >= _lastReport.Adapters.Count)
-            return _lastReport?.Adapters.FirstOrDefault(a => a.IsUp);
-        return _lastReport.Adapters[AdapterCombo.SelectedIndex];
+        if (_lastReport is null) return null;
+        List<NetworkAdapterInfo> visible = _lastReport.Adapters
+            .Where(a => !HostDiscoveryService.IsGhostSecondaryAdapter(a))
+            .ToList();
+        if (AdapterCombo.SelectedIndex >= 0 && AdapterCombo.SelectedIndex < visible.Count)
+            return visible[AdapterCombo.SelectedIndex];
+        return visible.FirstOrDefault(a => a.IsUp) ?? _lastReport.Adapters.FirstOrDefault(a => a.IsUp);
     }
 
     private void ProfileRadio_Checked(object sender, RoutedEventArgs e)
@@ -159,8 +171,8 @@ public partial class MainWindow : Window
             {
                 _customOverrides["tcp.loopback_large_mtu"] =
                     string.Equals(val, "BBR2", StringComparison.OrdinalIgnoreCase) && _lastReport.OsInfo.RequiresBbr2LoopbackGuard
-                        ? "disable"
-                        : "enable";
+                        ? "Disabled"
+                        : "Enabled";
             }
 
             _syncing = true;
@@ -173,7 +185,11 @@ public partial class MainWindow : Window
     private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (SpeedLabelText is null) return;
-        SpeedLabelText.Text = e.NewValue >= 1000 ? "1+ Gbps" : $"{(int)e.NewValue} Mbps";
+        int mbps = (int)e.NewValue;
+        BdpResult bdp = BdpCalculator.Calculate(mbps, BandwidthUnit.Mbps, 40, 1500);
+        SpeedLabelText.Text = mbps >= 1000
+            ? $"1+ Gbps  •  RWIN {bdp.SuggestedRwinBytes / 1024.0:N0} KB"
+            : $"{mbps} Mbps  •  RWIN {bdp.SuggestedRwinBytes / 1024.0:N0} KB";
     }
 
     private void AdapterCombo_Changed(object sender, SelectionChangedEventArgs e)
@@ -185,12 +201,22 @@ public partial class MainWindow : Window
         MtuBox.Text = nic.Ipv4Mtu.ToString();
         PppoeCheck.IsChecked = nic.IsPppoe;
         _syncing = false;
+        ApplyProfileToControls(GetActiveProfile());
     }
 
     private void PppoeCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (_syncing) return;
         MtuBox.Text = PppoeCheck.IsChecked == true ? "1492" : "1500";
+        NetworkAdapterInfo? nic = GetSelectedAdapter();
+        if (nic is not null)
+        {
+            _customOverrides[$"nic.{nic.InterfaceGuid}.mtu"] = MtuBox.Text;
+            _syncing = true;
+            RadCustom.IsChecked = true;
+            _syncing = false;
+            ApplyProfileToControls(ProfileKind.Custom);
+        }
     }
 
     private void ResetDefaults_Click(object sender, RoutedEventArgs e)
@@ -201,7 +227,7 @@ public partial class MainWindow : Window
 
     private async void Rescan_Click(object sender, RoutedEventArgs e) => await RunScanAsync();
 
-    private void PreviewSelected_Click(object sender, RoutedEventArgs e)
+    private async void PreviewSelected_Click(object sender, RoutedEventArgs e)
     {
         if (_lastReport is null) return;
         IReadOnlyList<ChangePlanItem> diffs = _diffEngine.ComputeDiff(_lastReport, _customOverrides);
@@ -211,24 +237,77 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dlg = new DiffPreviewWindow(GetActiveProfile().ToString(), diffs) { Owner = this };
+        string profileName = GetActiveProfile().ToString();
+        var dlg = new DiffPreviewWindow(profileName, diffs) { Owner = this };
         if (dlg.ShowDialog() != true) return;
 
         if (dlg.SelectedAction == DiffModalAction.ExportScripts)
         {
-            ExportScripts(diffs, GetActiveProfile().ToString());
+            ExportScripts(diffs, profileName);
+            return;
         }
-        else if (dlg.SelectedAction == DiffModalAction.ApplyUac)
-        {
-            string? cli = ElevationLauncher.ResolveCliPath();
-            if (cli is null)
-            {
-                StatusText.Text = "FluentNet.Cli.exe not found beside FluentNet.Classic.exe — export .ps1/.reg instead.";
-                return;
-            }
 
-            ExportScripts(diffs, GetActiveProfile().ToString());
-            StatusText.Text = "Exported scripts; launching FluentNet.Cli.exe is available via UAC.";
+        if (dlg.SelectedAction == DiffModalAction.ApplyUac)
+        {
+            await ApplyChangesNativeOrElevatedAsync(diffs, profileName);
+        }
+    }
+
+    private async Task ApplyChangesNativeOrElevatedAsync(IReadOnlyList<ChangePlanItem> diffs, string profileName)
+    {
+        if (_lastReport is null) return;
+
+        var manifest = new SnapshotManifest(
+            $"snap-{DateTime.UtcNow:yyyyMMdd-HHmmss}",
+            DateTimeOffset.UtcNow,
+            _lastReport.OsInfo.BuildNumber.ToString(),
+            profileName,
+            diffs);
+
+        if (ElevationLauncher.IsProcessElevated())
+        {
+            StatusText.Text = $"Applying {diffs.Count} change(s) directly via native .NET...";
+            await _snapshotManager.SaveSnapshotAsync(manifest);
+            ApplyReport report = await _applyEngine.ApplyPlanAsync(manifest.Items);
+            await RunScanAsync();
+
+            if (report.AllSucceeded)
+            {
+                StatusText.Text = $"Applied {diffs.Count} setting(s) natively via .NET (snapshot saved).";
+            }
+            else
+            {
+                string failed = string.Join(" | ", report.Results.Where(r => !r.Succeeded).Take(3).Select(r => $"{r.ParameterId}: {r.Message}"));
+                StatusText.Text = $"Partial failure: {failed}";
+            }
+            return;
+        }
+
+        string? cli = ElevationLauncher.ResolveCliPath();
+        if (cli is null)
+        {
+            StatusText.Text = "FluentNet.Cli.exe not found beside FluentNet.Classic.exe — run as Administrator or export .ps1/.reg.";
+            return;
+        }
+
+        string tempPlan = Path.Combine(Path.GetTempPath(), $"fluentnet-plan-{Guid.NewGuid():N}.json");
+        File.WriteAllText(tempPlan, SnapshotManager.SerializeManifest(manifest));
+        try
+        {
+            StatusText.Text = $"Requesting UAC to apply {diffs.Count} change(s) natively...";
+            int code = await Task.Run(() => ElevationLauncher.RunElevatedCli(cli, $"apply --plan \"{tempPlan}\"", hideWindow: true));
+            await RunScanAsync();
+            StatusText.Text = code == 0
+                ? $"Applied {diffs.Count} setting(s) via native .NET worker (pre-change snapshot saved)."
+                : $"Elevated worker exited with code {code}.";
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            StatusText.Text = "UAC prompt cancelled — no changes were made.";
+        }
+        finally
+        {
+            try { if (File.Exists(tempPlan)) File.Delete(tempPlan); } catch { /* ignore */ }
         }
     }
 
@@ -310,9 +389,21 @@ public partial class MainWindow : Window
     private async void RollbackSnap_Click(object sender, RoutedEventArgs e)
     {
         if (SnapshotsList.SelectedItem is not string snapPath) return;
+
+        if (ElevationLauncher.IsProcessElevated())
+        {
+            SnapshotManifest? snap = await _snapshotManager.LoadSnapshotAsync(snapPath);
+            if (snap is null || snap.Items.Count == 0) return;
+            List<ChangePlanItem> revert = snap.Items.Select(i => i with { OldValue = i.NewValue, NewValue = i.OldValue }).ToList();
+            ApplyReport res = await _applyEngine.ApplyPlanAsync(revert);
+            StatusText.Text = res.AllSucceeded ? "Rollback complete (native .NET)." : "Rollback finished with errors.";
+            await RunScanAsync();
+            return;
+        }
+
         string? cli = ElevationLauncher.ResolveCliPath();
         if (cli is null) return;
-        int code = await Task.Run(() => ElevationLauncher.RunElevatedCli(cli, $"rollback --snapshot \"{snapPath}\""));
+        int code = await Task.Run(() => ElevationLauncher.RunElevatedCli(cli, $"rollback --snapshot \"{snapPath}\"", hideWindow: true));
         StatusText.Text = code == 0 ? "Rollback complete." : $"Rollback exited with code {code}.";
         await RunScanAsync();
     }

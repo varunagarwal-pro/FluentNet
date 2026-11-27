@@ -13,7 +13,8 @@ public enum ParameterSupportStatus
     Supported,
     NotSet,
     UnsupportedOnOs,
-    UnsupportedOnAdapter
+    UnsupportedOnAdapter,
+    ReadOnlyOnOs
 }
 
 public sealed record NetworkParameterState(
@@ -25,7 +26,8 @@ public sealed record NetworkParameterState(
     string ExactPath,
     ParameterSourceKind SourceKind,
     ParameterSupportStatus SupportStatus,
-    bool RequiresReboot);
+    bool RequiresReboot,
+    string? Description = null);
 
 public sealed record ChangePlanItem(
     string ParameterId,
@@ -43,3 +45,13 @@ public sealed record SnapshotManifest(
     string OsBuild,
     string ProfileName,
     IReadOnlyList<ChangePlanItem> Items);
+
+public sealed record ApplyItemResult(
+    string ParameterId,
+    bool Succeeded,
+    string Message);
+
+public sealed record ApplyReport(
+    bool AllSucceeded,
+    IReadOnlyList<ApplyItemResult> Results,
+    string? SnapshotPath = null);

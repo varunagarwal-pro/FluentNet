@@ -46,6 +46,15 @@ public sealed class UiAndEngineRegressionTests
     }
 
     [Fact]
+    public void ApplyEngine_DoesNotSpawnPowerShell()
+    {
+        string applyPath = Path.Combine(RepoRoot, "src", "FluentNet.Core", "Services", "ApplyEngine.cs");
+        string source = File.ReadAllText(applyPath);
+        Assert.DoesNotContain("powershell.exe", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ModifyInstance", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CimTcpProvider_DecodesNumericEnums_IntoReadableNames()
     {
         Assert.Equal("Disabled", CimTcpProvider.DecodeEnabledDisabled("0"));
@@ -53,6 +62,7 @@ public sealed class UiAndEngineRegressionTests
         Assert.Equal("Normal", CimTcpProvider.DecodeAutoTuning("3"));
         Assert.Equal("CUBIC", CimTcpProvider.DecodeCongestion("5"));
         Assert.Equal("BBR2", CimTcpProvider.DecodeCongestion("6"));
+        Assert.Equal("InitialWindow", CimTcpProvider.DecodePacingProfile("2"));
     }
 
     [Fact]
@@ -64,4 +74,3 @@ public sealed class UiAndEngineRegressionTests
         Assert.False(HostDiscoveryService.IsNoiseName("Ethernet", "Intel(R) Ethernet Connection (17) I219-LM"));
     }
 }
-

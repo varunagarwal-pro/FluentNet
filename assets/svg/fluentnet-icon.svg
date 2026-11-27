@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0C1936"/>
+      <stop offset="55%" stop-color="#0E254D"/>
+      <stop offset="100%" stop-color="#0A2F59"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#73BFFA" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#29CC9E" stop-opacity="0.38"/>
+    </linearGradient>
+    <linearGradient id="emeraldWave" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#22C57D"/>
+    </linearGradient>
+    <linearGradient id="cyanWave" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="50%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#7DD3FC"/>
+    </linearGradient>
+  </defs>
+  <rect x="28" y="28" width="968" height="968" rx="228" fill="url(#bg)"/>
+  <rect x="34" y="34" width="956" height="956" rx="222" fill="none" stroke="url(#rim)" stroke-width="10"/>
+  <path d="M140 620 C290 700, 390 540, 512 496 C640 450, 740 540, 884 610" fill="none" stroke="url(#emeraldWave)" stroke-width="30" stroke-linecap="round"/>
+  <path d="M140 560 C280 300, 400 370, 512 512 C624 654, 744 724, 884 464" fill="none" stroke="url(#cyanWave)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M140 560 C280 300, 400 370, 512 512 C624 654, 744 724, 884 464" fill="none" stroke="#ECFAFF" stroke-opacity="0.8" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="140" cy="560" r="65" fill="#0A1834"/><circle cx="140" cy="560" r="54" fill="#22D3EE"/><circle cx="140" cy="560" r="23" fill="#F8FAFC"/>
+  <circle cx="512" cy="512" r="77" fill="#0A1834"/><circle cx="512" cy="512" r="66" fill="#38BDF8"/><circle cx="512" cy="512" r="28" fill="#F8FAFC"/>
+  <circle cx="884" cy="464" r="65" fill="#0A1834"/><circle cx="884" cy="464" r="54" fill="#34D399"/><circle cx="884" cy="464" r="23" fill="#F8FAFC"/>
+</svg>

@@ -1,5 +1,6 @@
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using FluentNet.Core.Models;
 using Microsoft.Win32;
 
@@ -7,6 +8,15 @@ namespace FluentNet.Core.Services;
 
 public sealed class HostDiscoveryService
 {
+    private const int RelationProcessorCore = 0;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetLogicalProcessorInformationEx(
+        int relationshipType,
+        IntPtr buffer,
+        ref uint returnedLength);
+
     public Task<OsEnvironmentInfo> ProbeOsAsync(CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
@@ -31,7 +41,7 @@ public sealed class HostDiscoveryService
             }
 
             int logicalCores = Environment.ProcessorCount;
-            int physicalCores = Math.Max(1, logicalCores / 2);
+            int physicalCores = ProbePhysicalCoreCount(logicalCores);
 
             return new OsEnvironmentInfo(
                 ProductName: productName,
@@ -44,6 +54,61 @@ public sealed class HostDiscoveryService
                 SupportsBbr2: supportsBbr2,
                 RequiresBbr2LoopbackGuard: is24H2OrNewer);
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Queries exact physical CPU core count via Win32 GetLogicalProcessorInformationEx
+    /// so hybrid Intel/AMD CPUs (P-cores + E-cores) report true physical core counts.
+    /// </summary>
+    public static int ProbePhysicalCoreCount(int logicalFallback)
+    {
+        try
+        {
+            uint len = 0;
+            GetLogicalProcessorInformationEx(RelationProcessorCore, IntPtr.Zero, ref len);
+            if (len == 0)
+            {
+                return Math.Max(1, logicalFallback / 2);
+            }
+
+            IntPtr ptr = Marshal.AllocHGlobal((int)len);
+            try
+            {
+                if (!GetLogicalProcessorInformationEx(RelationProcessorCore, ptr, ref len))
+                {
+                    return Math.Max(1, logicalFallback / 2);
+                }
+
+                int cores = 0;
+                int offset = 0;
+                while (offset + 8 <= (int)len)
+                {
+                    int relationship = Marshal.ReadInt32(ptr, offset);
+                    int size = Marshal.ReadInt32(ptr, offset + 4);
+                    if (size <= 0)
+                    {
+                        break;
+                    }
+
+                    if (relationship == RelationProcessorCore)
+                    {
+                        cores++;
+                    }
+
+                    offset += size;
+                }
+
+                return cores > 0 ? cores : Math.Max(1, logicalFallback / 2);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+        }
+        catch
+        {
+            return Math.Max(1, logicalFallback / 2);
+        }
     }
 
     public Task<IReadOnlyList<NetworkAdapterInfo>> DiscoverAdaptersAsync(
@@ -92,6 +157,20 @@ public sealed class HostDiscoveryService
                     }
                 }
 
+                string? gateway = ipProps.GatewayAddresses
+                    .Select(g => g.Address)
+                    .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork && !a.Equals(System.Net.IPAddress.Any))
+                    ?.ToString();
+
+                List<string> dnsServers = ipProps.DnsAddresses
+                    .Where(d => d.AddressFamily == AddressFamily.InterNetwork || (!d.IsIPv6SiteLocal && !d.IsIPv6LinkLocal))
+                    .Select(d => d.ToString())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Take(4)
+                    .ToList();
+
+                string? mac = FormatMacAddress(nic.GetPhysicalAddress());
+
                 AdapterMediaKind media = ClassifyMedia(nic);
                 long speedMbps = nic.Speed > 0 ? nic.Speed / 1_000_000L : 0;
                 int mtu = ipv4Props?.Mtu ?? 1500;
@@ -115,7 +194,10 @@ public sealed class HostDiscoveryService
                     IsPppoe: isPppoe,
                     Ipv4Address: ipv4,
                     Ipv6Address: ipv6,
-                    AdvancedProperties: adv));
+                    AdvancedProperties: adv,
+                    MacAddress: mac,
+                    GatewayAddress: gateway,
+                    DnsServers: dnsServers));
             }
 
             return results
@@ -128,6 +210,45 @@ public sealed class HostDiscoveryService
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// Filters out disconnected duplicate/ghost adapters (e.g. Wi-Fi 2, Wi-Fi 3 with 0 Mbps and no IP)
+    /// while preserving all active adapters and primary physical Ethernet/Wi-Fi ports.
+    /// </summary>
+    public static bool IsGhostSecondaryAdapter(NetworkAdapterInfo adapter)
+    {
+        if (adapter.IsUp || adapter.LinkSpeedMbps > 0)
+        {
+            return false;
+        }
+
+        if (adapter.MediaKind is not (AdapterMediaKind.Ethernet or AdapterMediaKind.WiFi))
+        {
+            return true;
+        }
+
+        // Secondary numbered clones like "Wi-Fi 2", "Wi-Fi 3", "Ethernet 2" with no IP and DOWN
+        bool hasNoValidIp = string.IsNullOrWhiteSpace(adapter.Ipv4Address) ||
+                            (adapter.Ipv4Address is not null && adapter.Ipv4Address.StartsWith("169.254.", StringComparison.Ordinal));
+
+        if (hasNoValidIp && adapter.Description.IndexOf('#') >= 0)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string? FormatMacAddress(PhysicalAddress addr)
+    {
+        byte[] bytes = addr.GetAddressBytes();
+        if (bytes.Length == 0)
+        {
+            return null;
+        }
+
+        return string.Join(":", bytes.Select(b => b.ToString("X2")));
+    }
+
     private static bool IsNoiseInterface(NetworkInterface nic)
     {
         if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback)
@@ -135,15 +256,11 @@ public sealed class HostDiscoveryService
             return true;
         }
 
-        string name = nic.Name;
-        string desc = nic.Description;
-
         return IsNoiseName(nic.Name, nic.Description);
     }
 
     public static bool IsNoiseName(string name, string desc)
     {
-        // Filter NDIS LightWeight Filters, QoS Packet Schedulers, WAN Miniports, and Microsoft Kernel Debuggers
         return ContainsIgnoreCase(name, "QoS Packet Scheduler") ||
                ContainsIgnoreCase(name, "WFP Native MAC") ||
                ContainsIgnoreCase(name, "WFP 802.3") ||
