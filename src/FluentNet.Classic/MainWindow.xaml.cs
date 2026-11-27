@@ -219,6 +219,13 @@ public partial class MainWindow : Window
         }
     }
 
+    private void RecommendedSettings_Click(object sender, RoutedEventArgs e)
+    {
+        RadOptimal.IsChecked = true;
+        ApplyProfileToControls(ProfileKind.RecommendedOptimal);
+        StatusText.Text = "Recommended settings loaded. Review and click Apply to enforce them.";
+    }
+
     private void ResetDefaults_Click(object sender, RoutedEventArgs e)
     {
         RadDefault.IsChecked = true;

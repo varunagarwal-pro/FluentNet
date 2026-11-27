@@ -12,6 +12,7 @@ namespace FluentNet.Core.Serialization;
 [JsonSerializable(typeof(SnapshotManifest))]
 [JsonSerializable(typeof(ApplyItemResult))]
 [JsonSerializable(typeof(ApplyReport))]
+[JsonSerializable(typeof(CustomProfileDocument))]
 [JsonSerializable(typeof(OsEnvironmentInfo))]
 [JsonSerializable(typeof(AdapterAdvancedPropertyInfo))]
 [JsonSerializable(typeof(NetworkAdapterInfo))]

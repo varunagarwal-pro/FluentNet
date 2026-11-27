@@ -81,7 +81,7 @@ public sealed class ApplyEngine
         {
             using RegistryKey? key = hklm.OpenSubKey(subKey, writable: true);
             key?.DeleteValue(valueName, throwOnMissingValue: false);
-            return new ApplyItemResult(item.ParameterId, true, "Deleted registry override (restored Windows default).");
+            return new ApplyItemResult(item.ParameterId, true, "Restored Windows default.");
         }
 
         if (!TryParseDword(item.NewValue, out int dwordVal))
@@ -91,19 +91,26 @@ public sealed class ApplyEngine
 
         using RegistryKey targetKey = hklm.CreateSubKey(subKey, writable: true);
         targetKey.SetValue(valueName, dwordVal, RegistryValueKind.DWord);
-        return new ApplyItemResult(item.ParameterId, true, $"Set HKLM REG_DWORD = {item.NewValue} (native .NET)");
+        return new ApplyItemResult(item.ParameterId, true, $"Updated to {item.NewValue}.");
     }
 
     private static async Task<ApplyItemResult> ApplyCimNativeAsync(ChangePlanItem item, CancellationToken ct)
     {
-        // 1. Adapter MTU via native CIM MSFT_NetIPInterface
+        // 1. Adapter MTU via native CIM MSFT_NetIPInterface.NlMtu (with silent netsh subinterface fallback)
         if (item.ParameterId.StartsWith("nic.", StringComparison.OrdinalIgnoreCase) &&
             item.ParameterId.EndsWith(".mtu", StringComparison.OrdinalIgnoreCase))
         {
-            return ApplyAdapterMtuNative(item);
+            return await ApplyAdapterMtuNativeAsync(item, ct).ConfigureAwait(false);
         }
 
-        // 2. Global Offloads (RSS / RSC) via native CIM MSFT_NetOffloadGlobalSetting
+        // 2. Adapter IPv4 DNS via native CIM MSFT_NetClientDnsServerAddress (with silent netsh fallback)
+        if (item.ParameterId.StartsWith("nic.", StringComparison.OrdinalIgnoreCase) &&
+            item.ParameterId.EndsWith(".dns", StringComparison.OrdinalIgnoreCase))
+        {
+            return await ApplyAdapterDnsNativeAsync(item, ct).ConfigureAwait(false);
+        }
+
+        // 3. Global Offloads (RSS / RSC) via native CIM MSFT_NetOffloadGlobalSetting
         if (item.ParameterId is "offload.rss" or "offload.rsc")
         {
             string propName = item.ParameterId == "offload.rss" ? "ReceiveSideScaling" : "ReceiveSegmentCoalescing";
@@ -111,78 +118,162 @@ public sealed class ApplyEngine
             (bool ok, string msg) = ModifyCimProperty("SELECT * FROM MSFT_NetOffloadGlobalSetting", propName, encoded);
             if (ok)
             {
-                return new ApplyItemResult(item.ParameterId, true, $"Set {propName}={item.NewValue} (native CIM)");
+                return new ApplyItemResult(item.ParameterId, true, $"Set {propName}={item.NewValue}.");
             }
 
-            // Silent netsh fallback only if CIM rejected
             string netshArg = item.ParameterId == "offload.rss"
                 ? $"int tcp set global rss={item.NewValue.ToLowerInvariant()}"
                 : $"int tcp set global rsc={item.NewValue.ToLowerInvariant()}";
             (int code, string output) = await RunHiddenNetshAsync(netshArg, ct).ConfigureAwait(false);
             return code == 0
-                ? new ApplyItemResult(item.ParameterId, true, $"Set {propName}={item.NewValue} (netsh fallback)")
-                : new ApplyItemResult(item.ParameterId, false, $"CIM failed ({msg}); netsh exit {code}: {output}".Trim());
+                ? new ApplyItemResult(item.ParameterId, true, $"Set {propName}={item.NewValue}.")
+                : new ApplyItemResult(item.ParameterId, false, $"Could not update {propName}: {msg} ({output.Trim()})");
         }
 
-        // 3. TCP Template settings via native CIM MSFT_NetTCPSetting[SettingName='Internet']
+        // 4. TCP Template settings via native CIM MSFT_NetTCPSetting[SettingName='Internet']
         if (TryMapTcpCimProperty(item.ParameterId, item.NewValue, out string tcpProp, out object tcpVal))
         {
             (bool ok, string msg) = ModifyCimProperty("SELECT * FROM MSFT_NetTCPSetting WHERE SettingName='Internet'", tcpProp, tcpVal);
             if (ok)
             {
-                return new ApplyItemResult(item.ParameterId, true, $"Set MSFT_NetTCPSetting.{tcpProp}={item.NewValue} (native CIM)");
+                return new ApplyItemResult(item.ParameterId, true, $"Updated {tcpProp} to {item.NewValue}.");
             }
 
-            // Some Windows 10/11 Client builds mark certain Internet template fields read-only in CIM
-            // and require the kernel netsh ioctl path (still zero PowerShell, hidden no-window).
             string? netshFallback = BuildTcpNetshFallbackArgs(item.ParameterId, item.NewValue);
             if (!string.IsNullOrWhiteSpace(netshFallback))
             {
                 (int code, string output) = await RunHiddenNetshAsync(netshFallback!, ct).ConfigureAwait(false);
                 if (code == 0)
                 {
-                    return new ApplyItemResult(item.ParameterId, true, $"Set {tcpProp}={item.NewValue} (native netsh ioctl)");
+                    return new ApplyItemResult(item.ParameterId, true, $"Updated {tcpProp} to {item.NewValue}.");
                 }
-                return new ApplyItemResult(item.ParameterId, false, $"CIM: {msg}; netsh exit {code}: {output}".Trim());
+                return new ApplyItemResult(item.ParameterId, false, $"Could not update {tcpProp}: {output.Trim()}");
             }
 
-            return new ApplyItemResult(item.ParameterId, false, $"CIM ModifyInstance failed: {msg}");
+            return new ApplyItemResult(item.ParameterId, false, $"Could not update {tcpProp}: {msg}");
         }
 
-        return new ApplyItemResult(item.ParameterId, false, $"No native CIM handler for {item.ParameterId}");
+        return new ApplyItemResult(item.ParameterId, false, $"Unsupported setting: {item.ParameterId}");
     }
 
-    private static ApplyItemResult ApplyAdapterMtuNative(ChangePlanItem item)
+    private static async Task<ApplyItemResult> ApplyAdapterMtuNativeAsync(ChangePlanItem item, CancellationToken ct)
     {
         if (!uint.TryParse(item.NewValue, out uint mtu) || mtu < 576 || mtu > 9000)
         {
-            return new ApplyItemResult(item.ParameterId, false, $"Invalid MTU value: {item.NewValue} (expected 576-9000)");
+            return new ApplyItemResult(item.ParameterId, false, $"Invalid MTU value: {item.NewValue} (expected 576–9000).");
         }
 
-        // ExactPath format: MSFT_NetIPInterface[ifIndex=12].NlMtuBytes
-        string aliasOrIdx = item.ExactPath;
-        int eq = aliasOrIdx.IndexOf("ifIndex=", StringComparison.OrdinalIgnoreCase);
-        if (eq < 0)
+        if (!TryExtractInterfaceIndex(item.ExactPath, out uint ifIndex))
         {
-            return new ApplyItemResult(item.ParameterId, false, $"Missing interface index in {item.ExactPath}");
+            return new ApplyItemResult(item.ParameterId, false, $"Missing interface index in {item.ExactPath}.");
         }
 
-        int end = aliasOrIdx.IndexOf(']', eq);
-        string idxStr = end > eq ? aliasOrIdx.Substring(eq + 8, end - (eq + 8)) : string.Empty;
-        if (!uint.TryParse(idxStr, out uint ifIndex) || ifIndex == 0)
+        // MSFT_NetIPInterface exposes the IPv4/IPv6 MTU property as NlMtu
+        (bool ok, string msg) = ModifyCimProperty(
+            $"SELECT * FROM MSFT_NetIPInterface WHERE InterfaceIndex={ifIndex} AND AddressFamily=2",
+            "NlMtu",
+            mtu);
+        if (ok)
         {
-            return new ApplyItemResult(item.ParameterId, false, $"Invalid interface index '{idxStr}'");
+            return new ApplyItemResult(item.ParameterId, true, $"IPv4 MTU set to {mtu} bytes.");
         }
 
-        (bool ok, string msg) = ModifyCimProperty($"SELECT * FROM MSFT_NetIPInterface WHERE InterfaceIndex={ifIndex} AND AddressFamily=2", "NlMtuBytes", mtu);
-        return ok
-            ? new ApplyItemResult(item.ParameterId, true, $"Set IPv4 MTU={mtu} on InterfaceIndex {ifIndex} (native CIM)")
-            : new ApplyItemResult(item.ParameterId, false, $"Failed to set MTU via CIM: {msg}");
+        // Silent fallback via netsh subinterface (persists across reboots)
+        (int code, string output) = await RunHiddenNetshAsync(
+            $"int ipv4 set subinterface {ifIndex} mtu={mtu} store=persistent", ct).ConfigureAwait(false);
+        return code == 0
+            ? new ApplyItemResult(item.ParameterId, true, $"IPv4 MTU set to {mtu} bytes.")
+            : new ApplyItemResult(item.ParameterId, false, $"MTU update failed: {msg}; {output.Trim()}");
+    }
+
+    private static async Task<ApplyItemResult> ApplyAdapterDnsNativeAsync(ChangePlanItem item, CancellationToken ct)
+    {
+        if (!TryExtractInterfaceIndex(item.ExactPath, out uint ifIndex))
+        {
+            return new ApplyItemResult(item.ParameterId, false, $"Missing interface index in {item.ExactPath}.");
+        }
+
+        bool isDhcp = string.Equals(item.NewValue, "DHCP", StringComparison.OrdinalIgnoreCase) ||
+                      string.IsNullOrWhiteSpace(item.NewValue);
+
+        string[] servers = isDhcp
+            ? Array.Empty<string>()
+            : item.NewValue.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToArray();
+
+#if NET8_0_OR_GREATER
+        try
+        {
+            using CimSession session = CimSession.Create(null);
+            CimInstance? target = session.QueryInstances(
+                CimTcpProvider.StandardCimNamespace,
+                "WQL",
+                $"SELECT * FROM MSFT_NetClientDnsServerAddress WHERE InterfaceIndex={ifIndex} AND AddressFamily=2").FirstOrDefault();
+
+            if (target is not null)
+            {
+                using (target)
+                {
+                    if (isDhcp)
+                    {
+                        session.InvokeMethod(CimTcpProvider.StandardCimNamespace, target, "ResetServerAddresses", null);
+                    }
+                    else
+                    {
+                        var args = new CimMethodParametersCollection
+                        {
+                            CimMethodParameter.Create("ServerAddresses", servers, CimType.StringArray, CimFlags.In)
+                        };
+                        session.InvokeMethod(CimTcpProvider.StandardCimNamespace, target, "SetServerAddresses", args);
+                    }
+                    DnsOptimizerService.FlushDnsCache();
+                    return new ApplyItemResult(item.ParameterId, true, isDhcp ? "DNS restored to DHCP." : $"DNS set to {string.Join(", ", servers)}.");
+                }
+            }
+        }
+        catch
+        {
+            // Fall through to silent netsh fallback
+        }
+#endif
+
+        if (isDhcp)
+        {
+            (int code, string output) = await RunHiddenNetshAsync($"interface ipv4 set dnsservers name={ifIndex} source=dhcp", ct).ConfigureAwait(false);
+            if (code == 0)
+            {
+                DnsOptimizerService.FlushDnsCache();
+                return new ApplyItemResult(item.ParameterId, true, "DNS restored to DHCP.");
+            }
+            return new ApplyItemResult(item.ParameterId, false, $"Failed to restore DHCP DNS: {output.Trim()}");
+        }
+
+        (int c1, string o1) = await RunHiddenNetshAsync($"interface ipv4 set dnsservers name={ifIndex} source=static address={servers[0]} validate=no", ct).ConfigureAwait(false);
+        if (c1 != 0)
+        {
+            return new ApplyItemResult(item.ParameterId, false, $"Failed to set primary DNS: {o1.Trim()}");
+        }
+
+        if (servers.Length > 1)
+        {
+            await RunHiddenNetshAsync($"interface ipv4 add dnsservers name={ifIndex} address={servers[1]} index=2 validate=no", ct).ConfigureAwait(false);
+        }
+
+        DnsOptimizerService.FlushDnsCache();
+        return new ApplyItemResult(item.ParameterId, true, $"DNS set to {string.Join(", ", servers)}.");
+    }
+
+    private static bool TryExtractInterfaceIndex(string exactPath, out uint ifIndex)
+    {
+        ifIndex = 0;
+        int eq = exactPath.IndexOf("ifIndex=", StringComparison.OrdinalIgnoreCase);
+        if (eq < 0) return false;
+        int end = exactPath.IndexOf(']', eq);
+        string idxStr = end > eq ? exactPath.Substring(eq + 8, end - (eq + 8)) : string.Empty;
+        return uint.TryParse(idxStr, out ifIndex) && ifIndex > 0;
     }
 
     private static ApplyItemResult ApplyDriverAdvancedPropertyNative(ChangePlanItem item)
     {
-        // ExactPath format: MSFT_NetAdapterAdvancedPropertySettingData[Name='<alias>',RegistryKeyword='<kw>']
         string path = item.ExactPath;
         string? alias = ExtractBracketField(path, "Name");
         string? keyword = ExtractBracketField(path, "RegistryKeyword");
@@ -197,8 +288,8 @@ public sealed class ApplyEngine
 
         (bool ok, string msg) = ModifyCimProperty(wql, "DisplayValue", item.NewValue);
         return ok
-            ? new ApplyItemResult(item.ParameterId, true, $"Set [{alias}] {keyword}={item.NewValue} (native CIM)")
-            : new ApplyItemResult(item.ParameterId, false, $"Driver property CIM update failed: {msg}");
+            ? new ApplyItemResult(item.ParameterId, true, $"Updated [{alias}] {keyword} to {item.NewValue}.")
+            : new ApplyItemResult(item.ParameterId, false, $"Driver property update failed: {msg}");
     }
 
     private static async Task<ApplyItemResult> ApplyNetshNativeFallbackAsync(ChangePlanItem item, CancellationToken ct)
@@ -209,20 +300,20 @@ public sealed class ApplyEngine
             (int c4, string o4) = await RunHiddenNetshAsync($"int ipv4 set global loopbacklargemtu={val}", ct).ConfigureAwait(false);
             (int c6, string o6) = await RunHiddenNetshAsync($"int ipv6 set global loopbacklargemtu={val}", ct).ConfigureAwait(false);
             return c4 == 0 && c6 == 0
-                ? new ApplyItemResult(item.ParameterId, true, $"Set IPv4/IPv6 loopbacklargemtu={val}.")
-                : new ApplyItemResult(item.ParameterId, false, $"netsh failed: {o4} {o6}".Trim());
+                ? new ApplyItemResult(item.ParameterId, true, $"Loopback Large MTU set to {item.NewValue}.")
+                : new ApplyItemResult(item.ParameterId, false, $"Loopback MTU update failed: {o4} {o6}".Trim());
         }
 
         string? fallback = BuildTcpNetshFallbackArgs(item.ParameterId, item.NewValue);
         if (string.IsNullOrWhiteSpace(fallback))
         {
-            return new ApplyItemResult(item.ParameterId, false, $"No netsh handler for {item.ParameterId}");
+            return new ApplyItemResult(item.ParameterId, false, $"Unsupported setting: {item.ParameterId}");
         }
 
         (int code, string output) = await RunHiddenNetshAsync(fallback!, ct).ConfigureAwait(false);
         return code == 0
-            ? new ApplyItemResult(item.ParameterId, true, "Applied via netsh.")
-            : new ApplyItemResult(item.ParameterId, false, $"netsh exit {code}: {output}".Trim());
+            ? new ApplyItemResult(item.ParameterId, true, "Setting applied.")
+            : new ApplyItemResult(item.ParameterId, false, $"Apply failed: {output.Trim()}");
     }
 
     private static (bool Succeeded, string Message) ModifyCimProperty(string wql, string propertyName, object newValue)
